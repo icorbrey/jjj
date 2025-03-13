@@ -1,0 +1,12 @@
+[package]
+name = "jjj"
+version = "0.0.0"
+authors = ["Isaac Corbrey <icorbrey@gmail.com>"]
+description = "A simple TUI for jj."
+edition = "2021"
+repository = "https://github.com/icorbrey/jjj"
+license = "MIT"
+categories = ["command-line-utilities"]
+keywords = ["jj", "gui", "cli", "terminal", "ui"]
+
+[dependencies]
