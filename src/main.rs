@@ -1,3 +1,8 @@
+pub mod app;
+pub mod screens;
+
+use bevy::prelude::*;
+
 fn main() {
-    println!("Hello, world!");
+    App::new().add_plugins(app::plugin).run();
 }
