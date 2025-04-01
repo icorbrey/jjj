@@ -2615,6 +2615,7 @@ dependencies = [
  "bevy_ratatui",
  "color-eyre",
  "crossterm",
+ "lazy_static",
  "ratatui",
 ]
 
