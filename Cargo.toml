@@ -11,12 +11,15 @@ categories = ["command-line-utilities"]
 keywords = ["jj", "gui", "cli", "terminal", "ui"]
 
 [dependencies]
+anyhow = "1.0.97"
 bevy_ratatui = "0.7.1"
+chrono = "0.4.40"
 clap = { version = "4.5.35", features = ["cargo", "derive", "string", "wrap_help"] }
-color-eyre = "0.6.3"
 crossterm = "0.28.1"
 lazy_static = "1.5.0"
-ratatui = "0.29.0"
+rand = "0.9.0"
+ratatui = { version = "0.29.0", features = ["unstable-rendered-line-info"] }
+regex = "1.11.1"
 
 [dependencies.bevy]
 version = "0.15.3"

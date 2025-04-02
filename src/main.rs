@@ -1,8 +1,11 @@
 pub mod app;
 pub mod backend;
 pub mod cli;
+pub mod errors;
+pub mod events;
 pub mod frontend;
 pub mod screens;
+pub mod utils;
 
 use bevy::prelude::*;
 use clap::Parser;
