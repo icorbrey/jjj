@@ -6,7 +6,10 @@ use bevy::{app::ScheduleRunnerPlugin, prelude::*, state::app::StatesPlugin};
 use bevy_ratatui::{event::KeyEvent, RatatuiPlugins};
 use crossterm::event::KeyCode;
 
-use crate::screens;
+use crate::{
+    frontend::{change_buffer, status_line},
+    screens,
+};
 
 pub fn plugin(app: &mut App) {
     app.configure_sets(
@@ -28,7 +31,7 @@ pub fn plugin(app: &mut App) {
         StatesPlugin,
     ));
 
-    app.add_plugins(screens::plugin);
+    app.add_plugins((screens::plugin, status_line::plugin, change_buffer::plugin));
 
     app.add_systems(Update, read_quit.in_set(AppSet::RecordInput));
 }
