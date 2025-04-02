@@ -14,7 +14,7 @@ pub fn plugin(app: &mut App) {
 }
 
 /// Determines what screen should be shown.
-#[derive(States, Debug, Hash, PartialEq, Eq, Clone, Default)]
+#[derive(States, Debug, Hash, PartialEq, Eq, Clone, Copy, Default)]
 pub enum Screen {
     #[default]
     Splash,

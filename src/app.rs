@@ -4,12 +4,10 @@ use std::time::Duration;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*, state::app::StatesPlugin};
 use bevy_ratatui::{event::KeyEvent, RatatuiPlugins};
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyEventKind};
+use rand::Rng;
 
-use crate::{
-    frontend::{change_buffer, status_line},
-    screens,
-};
+use crate::{backend, errors::ErrorEvent, events, frontend, screens};
 
 pub fn plugin(app: &mut App) {
     app.configure_sets(
@@ -31,16 +29,40 @@ pub fn plugin(app: &mut App) {
         StatesPlugin,
     ));
 
-    app.add_plugins((screens::plugin, status_line::plugin, change_buffer::plugin));
+    app.add_plugins((
+        events::plugin,
+        screens::plugin,
+        frontend::plugin,
+        backend::plugin,
+    ));
 
-    app.add_systems(Update, read_quit.in_set(AppSet::RecordInput));
+    app.add_systems(
+        Update,
+        (read_quit, simulate_error).in_set(AppSet::RecordInput),
+    );
 }
 
 /// Quits the application if the user presses Q.
-fn read_quit(mut events: EventReader<KeyEvent>, mut exit: EventWriter<AppExit>) {
-    for event in events.read() {
-        if let KeyCode::Char('q') = event.code {
+fn read_quit(mut ev_keypresses: EventReader<KeyEvent>, mut exit: EventWriter<AppExit>) {
+    for keypress in ev_keypresses.read() {
+        if let KeyCode::Char('q') = keypress.code {
             exit.send_default();
+        }
+    }
+}
+
+fn simulate_error(mut ev_keypresses: EventReader<KeyEvent>, mut ev_error: EventWriter<ErrorEvent>) {
+    for keypress in ev_keypresses.read() {
+        if keypress.code == KeyCode::Char('e') && keypress.kind == KeyEventKind::Press {
+            let mut rng = rand::rng();
+            let len = rng.random_range(1..100);
+            ev_error.send(ErrorEvent::from(format!(
+                "Simulated error! {}",
+                rng.random_iter::<u8>()
+                    .take(len)
+                    .map(|i| i.to_string())
+                    .collect::<String>()
+            )));
         }
     }
 }

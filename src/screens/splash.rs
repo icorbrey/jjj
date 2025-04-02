@@ -2,9 +2,9 @@
 
 use std::time::Duration;
 
+use anyhow::Result;
 use bevy::prelude::*;
 use bevy_ratatui::{event::KeyEvent, terminal::RatatuiContext};
-use color_eyre::eyre::Result;
 use crossterm::event::KeyCode;
 use ratatui::{
     layout::{Flex, Rect},
@@ -59,7 +59,7 @@ const SPLASH_DURATION: Duration = Duration::from_millis(1950);
 const SPLASH_LINE_INTERVAL: Duration = Duration::from_millis(150);
 
 /// The splash screen.
-const SPLASH_LINES: [&'static str; 8] = [
+const SPLASH_LINES: [&str; 8] = [
     "███████╗███████╗███████╗",
     "╚════██║╚════██║╚════██║",
     "     ██║     ██║     ██║",
