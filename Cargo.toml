@@ -12,6 +12,7 @@ keywords = ["jj", "gui", "cli", "terminal", "ui"]
 
 [dependencies]
 bevy_ratatui = "0.7.1"
+clap = { version = "4.5.35", features = ["cargo", "derive", "string", "wrap_help"] }
 color-eyre = "0.6.3"
 crossterm = "0.28.1"
 lazy_static = "1.5.0"
