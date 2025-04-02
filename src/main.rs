@@ -1,5 +1,6 @@
 pub mod app;
-pub mod components;
+pub mod backend;
+pub mod frontend;
 pub mod screens;
 
 use bevy::prelude::*;
