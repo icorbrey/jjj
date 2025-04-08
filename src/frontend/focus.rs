@@ -9,5 +9,7 @@ pub enum Focus {
     #[default]
     ChangeBuffer,
     ErrorPopup,
+    RevsetPrompt,
+    SpaceMenu,
     StatusLine,
 }

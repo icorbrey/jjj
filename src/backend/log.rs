@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use bevy::prelude::*;
 use regex::{Captures, Match, Regex};
 
-use crate::{app::AppSet, errors, join, screens::Screen};
+use crate::{app::AppSet, errors, events::prelude::*, join, screens::Screen};
 
 use super::{
     execute_jj_command,
@@ -73,6 +73,7 @@ const MATCH_LOG: &str = concat!(
 );
 
 fn read_logs(
+    mut ev_purge_log: EventWriter<PurgeChangeBufferEvent>,
     mut ev_log_response: EventWriter<LogResponseEvent>,
     mut ev_log_request: EventReader<LogRequestEvent>,
 ) -> Result<()> {
@@ -89,6 +90,7 @@ fn read_logs(
             batch.push(LogResponseEvent(line?))
         }
 
+        ev_purge_log.send(default());
         ev_log_response.send_batch(batch);
     }
 

@@ -6,17 +6,14 @@ use ratatui::{
     widgets::Block,
 };
 
-use crate::{
-    backend::{log::LogResponseEvent, revisions::Revision},
-    frontend::viewport,
-};
+use crate::{backend::revisions::Revision, events::prelude::*, frontend::viewport};
 
 use super::prelude::*;
 
 #[derive(Event)]
 pub struct ChangeBufferSelectionEvent(pub RevisionSelection);
 
-#[derive(Event)]
+#[derive(Default, Event)]
 pub struct PurgeChangeBufferEvent;
 
 pub fn plugin(app: &mut App) {
@@ -64,6 +61,7 @@ pub enum RevisionSelection {
 
 fn navigate_buffer(
     mut ev_selection: EventWriter<ChangeBufferSelectionEvent>,
+    mut ev_space_menu: EventWriter<OpenSpaceMenuEvent>,
     mut ev_keypresses: EventReader<KeyEvent>,
     mut change_buffer: ResMut<ChangeBuffer>,
 ) {
@@ -79,6 +77,10 @@ fn navigate_buffer(
         let max = change_buffer.revisions.len().saturating_sub(1);
 
         let selection = match (change_buffer.selection, keypress.code) {
+            (_, KeyCode::Char(' ')) => {
+                ev_space_menu.send(default());
+                continue;
+            }
             (IndexSelection::Single(i), KeyCode::Char('j')) => {
                 Some(IndexSelection::Single(usize::min(i + 1, max)))
             }

@@ -4,9 +4,10 @@ use anyhow::Result;
 use bevy::prelude::*;
 use bevy_ratatui::terminal::RatatuiContext;
 use ratatui::prelude::*;
+use ratatui::widgets::Clear;
 
 use crate::app::AppSet;
-use crate::backend::log::LogRequestEvent;
+use crate::events::prelude::*;
 use crate::frontend::prelude::*;
 
 use super::Screen;
@@ -31,10 +32,14 @@ fn get_log(mut ev_read_log: EventWriter<LogRequestEvent>) {
 fn draw(
     mut change_buffer: ResMut<ChangeBuffer>,
     mut context: ResMut<RatatuiContext>,
+    revset_prompt: Res<RevsetPrompt>,
     error_popup: Res<ErrorPopup>,
     status_line: Res<StatusLine>,
+    space_menu: Res<SpaceMenu>,
 ) -> Result<()> {
     context.draw(|frame| {
+        frame.render_widget(Clear, frame.area());
+
         let [buffer_area, status_line_area, _] = Layout::vertical([
             Constraint::Fill(1),
             Constraint::Length(1),
@@ -51,6 +56,8 @@ fn draw(
         frame.render_widget(status_line.into_inner(), status_line_area);
 
         // Render after everything else
+        frame.render_widget(revset_prompt.into_inner(), frame.area());
+        frame.render_widget(space_menu.into_inner(), frame.area());
         frame.render_widget(error_popup.into_inner(), frame.area());
     })?;
 
