@@ -92,6 +92,15 @@ impl Widget for &RevsetPrompt {
             return;
         };
 
+        let [_, center, _] = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Fill(1),
+                Constraint::Max(64),
+                Constraint::Fill(1),
+            ])
+            .areas(area);
+
         let [_, prompt_area, _] = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -100,7 +109,7 @@ impl Widget for &RevsetPrompt {
                 Constraint::Fill(1),
             ])
             .horizontal_margin(2)
-            .areas(area);
+            .areas(center);
 
         Clear.render(prompt_area, buf);
         Paragraph::new(input.as_str())
