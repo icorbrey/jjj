@@ -1,6 +1,6 @@
 [package]
 name = "jjj"
-version = "0.0.0"
+version = "0.1.0"
 authors = ["Isaac Corbrey <icorbrey@gmail.com>"]
 description = "A simple TUI for jj."
 edition = "2021"
@@ -14,7 +14,12 @@ keywords = ["jj", "gui", "cli", "terminal", "ui"]
 anyhow = "1.0.97"
 bevy_ratatui = "0.7.1"
 chrono = "0.4.40"
-clap = { version = "4.5.35", features = ["cargo", "derive", "string", "wrap_help"] }
+clap = { version = "4.5.35", features = [
+    "cargo",
+    "derive",
+    "string",
+    "wrap_help",
+] }
 crossterm = "0.28.1"
 lazy_static = "1.5.0"
 rand = "0.9.0"
