@@ -2,37 +2,35 @@ use anyhow::{anyhow, Result};
 use bevy::prelude::*;
 use regex::{Captures, Match, Regex};
 
-use crate::{app::AppSet, errors, events::prelude::*, join, screens::Screen};
+use crate::{app::AppSet, errors, join, screens::Screen, utils::AppExt};
 
 use super::{
     execute_jj_command,
     revisions::{ChangeId, CommitId, Revision},
 };
 
+#[derive(Default, Event)]
+pub struct RefreshLogEvent;
+
+#[derive(Event)]
+pub struct LogRevsetEvent(pub String);
+
+#[derive(Event, Deref, DerefMut)]
+pub struct LogResponseEvent(pub Vec<Revision>);
+
+#[derive(Default, Deref, DerefMut, Reflect, Resource)]
+pub struct CurrentRevset(pub Option<String>);
+
 pub fn plugin(app: &mut App) {
+    app.register_scoped_type::<CurrentRevset>(Screen::Interface);
     app.add_systems(
         Update,
-        (read_logs.pipe(errors::forward))
+        (refresh_log, read_logs.pipe(errors::forward))
+            .chain()
             .in_set(AppSet::Update)
             .run_if(in_state(Screen::Interface)),
     );
 }
-
-#[derive(Event)]
-pub struct LogRequestEvent {
-    pub revset: String,
-}
-
-impl<S: Into<String>> From<S> for LogRequestEvent {
-    fn from(value: S) -> Self {
-        Self {
-            revset: value.into(),
-        }
-    }
-}
-
-#[derive(Event, Deref, DerefMut)]
-pub struct LogResponseEvent(pub Revision);
 
 const LOG_TEMPLATE: &str = concat!(
     "'[' ++ ",
@@ -72,26 +70,38 @@ const MATCH_LOG: &str = concat!(
     r#"\]"#,
 );
 
+fn refresh_log(
+    mut ev_refresh_log: EventReader<RefreshLogEvent>,
+    mut ev_log_revset: EventWriter<LogRevsetEvent>,
+    current_revset: Res<CurrentRevset>,
+) {
+    for _ in ev_refresh_log.read() {
+        if let Some(revset) = current_revset.0.clone() {
+            ev_log_revset.send(LogRevsetEvent(revset));
+        }
+    }
+}
+
 fn read_logs(
-    mut ev_purge_log: EventWriter<PurgeChangeBufferEvent>,
     mut ev_log_response: EventWriter<LogResponseEvent>,
-    mut ev_log_request: EventReader<LogRequestEvent>,
+    mut ev_log_revset: EventReader<LogRevsetEvent>,
+    mut current_revset: ResMut<CurrentRevset>,
 ) -> Result<()> {
-    for LogRequestEvent { revset } in ev_log_request.read() {
+    for LogRevsetEvent(revset) in ev_log_revset.read() {
         let log = execute_jj_command(vec!["log", "-r", revset.as_str(), "-T", LOG_TEMPLATE])
             .map_err(|_| anyhow!("Couldn't read log for revset `{revset}`"))?;
 
-        let mut batch = vec![];
+        let mut revs = vec![];
         for line in (log.split("%JJJ%"))
             .filter(|l| !l.trim().is_empty())
             .map(parse_line)
             .filter_map(|l| l.transpose())
         {
-            batch.push(LogResponseEvent(line?))
+            revs.push(line?)
         }
 
-        ev_purge_log.send(default());
-        ev_log_response.send_batch(batch);
+        ev_log_response.send(LogResponseEvent(revs));
+        current_revset.0 = Some(revset.clone());
     }
 
     Ok(())
