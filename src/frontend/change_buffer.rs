@@ -6,37 +6,35 @@ use ratatui::{
     widgets::Block,
 };
 
-use crate::{backend::revisions::Revision, events::prelude::*, frontend::viewport};
+use crate::backend::{log::LogResponseEvent, revisions::Revision};
 
 use super::prelude::*;
+
+pub fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            (read_keys.pipe(errors::forward))
+                .in_set(AppSet::RecordInput)
+                .run_if(is_focused::<ChangeBuffer>),
+            (read_revisions.pipe(errors::forward))
+                .in_set(AppSet::Update)
+                .run_if(in_state(Screen::Interface)),
+        ),
+    );
+}
 
 #[derive(Event)]
 pub struct ChangeBufferSelectionEvent(pub RevisionSelection);
 
-pub fn plugin(app: &mut App) {
-    app.register_scoped_type::<ChangeBuffer>(Screen::Interface);
-
-    app.add_systems(
-        Update,
-        (
-            navigate_buffer
-                .in_set(AppSet::RecordInput)
-                .run_if(in_state(Focus::ChangeBuffer)),
-            read_revisions.chain().in_set(AppSet::Update),
-        )
-            .run_if(in_state(Screen::Interface)),
-    );
-}
-
-#[derive(Clone, Default, Reflect, Resource)]
+#[derive(Clone, Component, Default)]
 pub struct ChangeBuffer {
     revisions: Vec<Revision>,
     selection: IndexSelection,
     pub viewport_y: usize,
-    viewport_height: usize,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Reflect)]
+#[derive(Clone)]
 pub enum IndexSelection {
     Single(usize),
     Range(usize, usize),
@@ -48,20 +46,22 @@ impl Default for IndexSelection {
     }
 }
 
-#[derive(Clone, Reflect)]
+#[derive(Clone)]
 pub enum RevisionSelection {
     Single(Revision),
     Range(Revision, Revision),
 }
 
-fn navigate_buffer(
+fn read_keys(
     mut ev_selection: EventWriter<ChangeBufferSelectionEvent>,
-    mut ev_space_menu: EventWriter<OpenSpaceMenuEvent>,
+    mut change_buffer: Query<&mut ChangeBuffer>,
     mut ev_keypresses: EventReader<KeyEvent>,
-    mut change_buffer: ResMut<ChangeBuffer>,
-) {
+    mut navigation: Navigation,
+) -> Result<()> {
+    let mut change_buffer = change_buffer.get_single_mut()?;
+
     if change_buffer.revisions.len() == 0 {
-        return;
+        return Ok(());
     }
 
     for keypress in ev_keypresses.read() {
@@ -71,10 +71,10 @@ fn navigate_buffer(
 
         let max = change_buffer.revisions.len().saturating_sub(1);
 
-        let selection = match (change_buffer.selection, keypress.code) {
+        let selection = match (change_buffer.selection.clone(), keypress.code) {
             (_, KeyCode::Char(' ')) => {
-                ev_space_menu.send(default());
-                continue;
+                navigation.spawn_popup(SpaceMenu)?;
+                return Ok(());
             }
             (IndexSelection::Single(i), KeyCode::Char('j')) => {
                 Some(IndexSelection::Single(usize::min(i + 1, max)))
@@ -102,7 +102,7 @@ fn navigate_buffer(
         };
 
         if let Some(selection) = selection {
-            change_buffer.selection = selection;
+            change_buffer.selection = selection.clone();
             ev_selection.send(match selection {
                 IndexSelection::Single(i) => ChangeBufferSelectionEvent(RevisionSelection::Single(
                     change_buffer.revisions[i].clone(),
@@ -116,12 +116,16 @@ fn navigate_buffer(
             });
         }
     }
+
+    Ok(())
 }
 
 fn read_revisions(
     mut ev_log_response: EventReader<LogResponseEvent>,
-    mut change_buffer: ResMut<ChangeBuffer>,
-) {
+    mut change_buffer: Query<&mut ChangeBuffer>,
+) -> Result<()> {
+    let mut change_buffer = change_buffer.get_single_mut()?;
+
     for LogResponseEvent(revisions) in ev_log_response.read() {
         if change_buffer.revisions.is_empty() {
             change_buffer.selection = IndexSelection::Single(0);
@@ -155,6 +159,8 @@ fn read_revisions(
             }
         }
     }
+
+    Ok(())
 }
 
 impl StatefulWidget for ChangeBuffer {

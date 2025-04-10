@@ -4,37 +4,32 @@ use ratatui::{
     widgets::Block,
 };
 
-use crate::events::prelude::*;
+use crate::backend::log::LogRevsetEvent;
 
-use super::{change_buffer::RevisionSelection, prelude::*};
+use super::change_buffer::{ChangeBufferSelectionEvent, RevisionSelection};
+use super::prelude::*;
 
 pub fn plugin(app: &mut App) {
-    app.register_scoped_type::<StatusLine>(Screen::Interface);
-
     app.add_systems(
         Update,
-        (monitor_logged_revset, monitor_selected_revset)
-            .run_if(in_state(Screen::Interface))
-            .in_set(AppSet::Update),
+        (monitor_logged_revset, monitor_selected_revset).in_set(AppSet::Update),
     );
 }
 
-#[derive(Default, Reflect, Resource)]
+#[derive(Component, Default)]
 pub struct StatusLine {
     pub logged_revset: Option<String>,
     pub selected_revset: Option<RevisionSelection>,
 }
 
-impl StatusLine {
-    fn revset(&self) -> String {
-        self.logged_revset.clone().unwrap_or("-".into())
-    }
-}
-
 fn monitor_logged_revset(
     mut ev_log_request: EventReader<LogRevsetEvent>,
-    mut status_line: ResMut<StatusLine>,
+    mut status_line: Query<&mut StatusLine>,
 ) {
+    let Ok(mut status_line) = status_line.get_single_mut() else {
+        return;
+    };
+
     for LogRevsetEvent(revset) in ev_log_request.read() {
         status_line.logged_revset = Some(revset.clone());
     }
@@ -42,8 +37,12 @@ fn monitor_logged_revset(
 
 fn monitor_selected_revset(
     mut ev_selection: EventReader<ChangeBufferSelectionEvent>,
-    mut status_line: ResMut<StatusLine>,
+    mut status_line: Query<&mut StatusLine>,
 ) {
+    let Ok(mut status_line) = status_line.get_single_mut() else {
+        return;
+    };
+
     for ChangeBufferSelectionEvent(selection) in ev_selection.read() {
         status_line.selected_revset = Some(selection.clone());
     }
@@ -76,7 +75,9 @@ impl Widget for &StatusLine {
             None => "-".into(),
         };
 
-        let logged_revset = Span::styled(self.revset(), Style::new().black());
+        let revset = self.logged_revset.clone().unwrap_or("-".into());
+
+        let logged_revset = Span::styled(&revset, Style::new().black());
 
         let [_, selected_revset_area, logged_revset_area] = Layout::default()
             .direction(Direction::Horizontal)
@@ -85,7 +86,7 @@ impl Widget for &StatusLine {
             .constraints([
                 Constraint::Fill(1),
                 Constraint::Length(selected_revset.width() as u16),
-                Constraint::Length(self.revset().len().try_into().unwrap()),
+                Constraint::Length(revset.len().try_into().unwrap()),
             ])
             .areas(status_line_area);
 

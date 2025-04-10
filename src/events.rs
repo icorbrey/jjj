@@ -1,14 +1,10 @@
 use bevy::prelude::*;
 use prelude::*;
 
-use crate::backend::log::RefreshLogEvent;
-
 pub mod prelude {
-    pub use crate::backend::log::{LogResponseEvent, LogRevsetEvent};
+    pub use crate::backend::log::{LogResponseEvent, LogRevsetEvent, RefreshLogEvent};
     pub use crate::errors::ErrorEvent;
     pub use crate::frontend::change_buffer::ChangeBufferSelectionEvent;
-    pub use crate::frontend::revset_prompt::OpenRevsetPromptEvent;
-    pub use crate::frontend::space_menu::OpenSpaceMenuEvent;
 }
 
 pub fn plugin(app: &mut App) {
@@ -21,7 +17,5 @@ pub fn plugin(app: &mut App) {
     app.add_event::<LogResponseEvent>();
 
     // Frontend events
-    app.add_event::<OpenRevsetPromptEvent>();
-    app.add_event::<OpenSpaceMenuEvent>();
     app.add_event::<ChangeBufferSelectionEvent>();
 }

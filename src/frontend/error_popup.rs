@@ -12,36 +12,48 @@ use crate::errors::ErrorEvent;
 use super::prelude::*;
 
 pub fn plugin(app: &mut App) {
-    app.register_scoped_type::<ErrorPopup>(Screen::Interface);
-
     app.add_systems(
         Update,
         (
-            query_errors.in_set(AppSet::Update),
-            check_inputs
+            listen.in_set(AppSet::Update),
+            read_keys
                 .in_set(AppSet::RecordInput)
-                .run_if(in_state(Focus::ErrorPopup)),
-        )
-            .run_if(in_state(Screen::Interface)),
+                .run_if(is_focused::<ErrorPopup>),
+        ),
     );
 }
 
-fn query_errors(
+#[derive(Component, Default)]
+pub struct ErrorPopup {
+    pub errors: Vec<String>,
+}
+
+fn listen(
+    mut error_popup: Query<&mut ErrorPopup>,
     mut ev_errors: EventReader<ErrorEvent>,
-    mut error_popup: ResMut<ErrorPopup>,
-    mut focus: ResMut<NextState<Focus>>,
+    mut navigation: Navigation,
 ) {
     for error in ev_errors.read() {
+        let Ok(mut error_popup) = error_popup.get_single_mut() else {
+            navigation
+                .spawn_popup(ErrorPopup {
+                    errors: vec![error.to_string()],
+                })
+                .unwrap();
+            continue;
+        };
+
         error_popup.errors.push(error.to_string());
-        focus.set(Focus::ErrorPopup);
     }
 }
 
-fn check_inputs(
+fn read_keys(
     mut ev_keypresses: EventReader<KeyEvent>,
-    mut error_popup: ResMut<ErrorPopup>,
-    mut focus: ResMut<NextState<Focus>>,
+    mut error_popup: Query<&mut ErrorPopup>,
+    mut navigation: Navigation,
 ) {
+    let mut error_popup = error_popup.get_single_mut().unwrap();
+
     for keypress in ev_keypresses.read() {
         match keypress.code {
             KeyCode::Esc => {
@@ -54,14 +66,9 @@ fn check_inputs(
         }
 
         if error_popup.errors.is_empty() {
-            focus.set(Focus::ChangeBuffer);
+            navigation.go_back().unwrap();
         }
     }
-}
-
-#[derive(Default, Reflect, Resource)]
-pub struct ErrorPopup {
-    pub errors: Vec<String>,
 }
 
 impl Widget for &ErrorPopup {
@@ -80,13 +87,6 @@ impl Widget for &ErrorPopup {
         let popup_title = Span::from(" Error ");
 
         let error_text = (self.errors.iter())
-            // .map(|e| {
-            //     if max_err_length < e.len() as u16 {
-            //         format!("{}...", &e[..(max_err_length - 3) as usize])
-            //     } else {
-            //         e.clone()
-            //     }
-            // })
             .map(|e| Line::from(Span::styled(e, Style::new().red().italic())))
             .collect::<Vec<_>>();
 
