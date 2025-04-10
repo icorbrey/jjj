@@ -1,8 +1,8 @@
 use bevy::prelude::*;
-use bevy_ratatui::event::KeyEvent;
-use crossterm::event::{KeyCode, KeyEventKind};
+use crossterm::event::KeyCode;
 use ratatui::{
-    prelude::{Rect, *},
+    layout::Rect,
+    prelude::*,
     widgets::{Block, BorderType, Clear, Padding, Paragraph},
 };
 
@@ -10,47 +10,28 @@ use crate::backend::log::LogRevsetEvent;
 
 use super::prelude::*;
 
-#[derive(Default, Event)]
-pub struct OpenRevsetPromptEvent;
-
 pub fn plugin(app: &mut App) {
-    app.register_scoped_type::<RevsetPrompt>(Screen::Interface);
-
     app.add_systems(
         Update,
-        (
-            open_prompt.in_set(AppSet::Update),
-            prompt_input
-                .in_set(AppSet::RecordInput)
-                .run_if(in_state(Focus::RevsetPrompt)),
-        )
-            .run_if(in_state(Screen::Interface)),
+        (read_keys.pipe(errors::forward))
+            .in_set(AppSet::RecordInput)
+            .run_if(is_focused::<RevsetPrompt>),
     );
 }
 
-#[derive(Default, Reflect, Resource)]
+#[derive(Component, Default)]
 pub struct RevsetPrompt {
-    input: Option<String>,
+    input: String,
 }
 
-fn open_prompt(
-    mut ev_open_prompt: EventReader<OpenRevsetPromptEvent>,
-    mut revset_prompt: ResMut<RevsetPrompt>,
-    mut focus: ResMut<NextState<Focus>>,
-) {
-    for _ in ev_open_prompt.read() {
-        revset_prompt.input = Some(default());
-        focus.set(Focus::RevsetPrompt);
-        return;
-    }
-}
-
-fn prompt_input(
+fn read_keys(
     mut ev_log_request: EventWriter<LogRevsetEvent>,
+    mut revset_prompt: Query<&mut RevsetPrompt>,
     mut ev_keypresses: EventReader<KeyEvent>,
-    mut revset_prompt: ResMut<RevsetPrompt>,
-    mut focus: ResMut<NextState<Focus>>,
-) {
+    mut navigation: Navigation,
+) -> Result<()> {
+    let mut revset_prompt = revset_prompt.get_single_mut()?;
+
     for keypress in ev_keypresses.read() {
         if keypress.kind != KeyEventKind::Press {
             continue;
@@ -58,29 +39,24 @@ fn prompt_input(
 
         match keypress.code {
             KeyCode::Enter => {
-                if let Some(revset) = revset_prompt.input.clone() {
-                    ev_log_request.send(LogRevsetEvent(revset));
-                    focus.set(Focus::ChangeBuffer);
-                    revset_prompt.input = None;
-                }
+                let revset = revset_prompt.input.clone();
+                ev_log_request.send(LogRevsetEvent(revset));
+                navigation.go_back()?;
             }
             KeyCode::Esc => {
-                focus.set(Focus::ChangeBuffer);
-                revset_prompt.input = None;
+                navigation.go_back()?;
             }
             KeyCode::Backspace => {
-                if let Some(ref mut revset) = revset_prompt.input {
-                    *revset = revset[..revset.len().saturating_sub(1)].to_owned();
-                }
+                revset_prompt.input.pop();
             }
             KeyCode::Char(ch) => {
-                if let Some(ref mut revset) = revset_prompt.input {
-                    *revset = format!("{revset}{ch}");
-                }
+                revset_prompt.input.push(ch);
             }
             _ => {}
         }
     }
+
+    Ok(())
 }
 
 impl Widget for &RevsetPrompt {
@@ -88,10 +64,6 @@ impl Widget for &RevsetPrompt {
     where
         Self: Sized,
     {
-        let Some(ref input) = self.input else {
-            return;
-        };
-
         let [_, center, _] = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
@@ -112,7 +84,7 @@ impl Widget for &RevsetPrompt {
             .areas(center);
 
         Clear.render(prompt_area, buf);
-        Paragraph::new(input.as_str())
+        Paragraph::new(self.input.as_str())
             .block(
                 Block::bordered()
                     .border_type(BorderType::Rounded)
