@@ -6,10 +6,11 @@ use anyhow::Result;
 use bevy::prelude::*;
 
 pub mod log;
+pub mod poll;
 pub mod revisions;
 
 pub fn plugin(app: &mut App) {
-    app.add_plugins(log::plugin);
+    app.add_plugins((log::plugin, poll::plugin));
 }
 
 pub(super) fn execute_jj_command(args: Vec<&str>) -> Result<String> {

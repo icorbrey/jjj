@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Block, BorderType, Clear, Padding, Paragraph},
 };
 
-use crate::backend::log::LogRequestEvent;
+use crate::backend::log::LogRevsetEvent;
 
 use super::prelude::*;
 
@@ -46,7 +46,7 @@ fn open_prompt(
 }
 
 fn prompt_input(
-    mut ev_log_request: EventWriter<LogRequestEvent>,
+    mut ev_log_request: EventWriter<LogRevsetEvent>,
     mut ev_keypresses: EventReader<KeyEvent>,
     mut revset_prompt: ResMut<RevsetPrompt>,
     mut focus: ResMut<NextState<Focus>>,
@@ -59,7 +59,7 @@ fn prompt_input(
         match keypress.code {
             KeyCode::Enter => {
                 if let Some(revset) = revset_prompt.input.clone() {
-                    ev_log_request.send(LogRequestEvent { revset });
+                    ev_log_request.send(LogRevsetEvent(revset));
                     focus.set(Focus::ChangeBuffer);
                     revset_prompt.input = None;
                 }

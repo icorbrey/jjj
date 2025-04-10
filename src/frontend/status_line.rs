@@ -32,10 +32,10 @@ impl StatusLine {
 }
 
 fn monitor_logged_revset(
-    mut ev_log_request: EventReader<LogRequestEvent>,
+    mut ev_log_request: EventReader<LogRevsetEvent>,
     mut status_line: ResMut<StatusLine>,
 ) {
-    for LogRequestEvent { revset } in ev_log_request.read() {
+    for LogRevsetEvent(revset) in ev_log_request.read() {
         status_line.logged_revset = Some(revset.clone());
     }
 }

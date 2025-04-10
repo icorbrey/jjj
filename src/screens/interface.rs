@@ -23,9 +23,9 @@ pub fn plugin(app: &mut App) {
     );
 }
 
-fn get_log(mut ev_read_log: EventWriter<LogRequestEvent>) {
-    ev_read_log.send(LogRequestEvent::from(
-        "present(@) | ancestors(immutable_heads().., 2) | present(trunk())",
+fn get_log(mut ev_read_log: EventWriter<LogRevsetEvent>) {
+    ev_read_log.send(LogRevsetEvent(
+        "present(@) | ancestors(immutable_heads().., 2) | present(trunk())".to_string(),
     ));
 }
 

@@ -13,9 +13,6 @@ use super::prelude::*;
 #[derive(Event)]
 pub struct ChangeBufferSelectionEvent(pub RevisionSelection);
 
-#[derive(Default, Event)]
-pub struct PurgeChangeBufferEvent;
-
 pub fn plugin(app: &mut App) {
     app.register_scoped_type::<ChangeBuffer>(Screen::Interface);
 
@@ -25,9 +22,7 @@ pub fn plugin(app: &mut App) {
             navigate_buffer
                 .in_set(AppSet::RecordInput)
                 .run_if(in_state(Focus::ChangeBuffer)),
-            (purge_change_buffer, read_revisions)
-                .chain()
-                .in_set(AppSet::Update),
+            read_revisions.chain().in_set(AppSet::Update),
         )
             .run_if(in_state(Screen::Interface)),
     );
@@ -123,22 +118,42 @@ fn navigate_buffer(
     }
 }
 
-fn purge_change_buffer(
-    mut ev_purge: EventReader<PurgeChangeBufferEvent>,
-    mut change_buffer: ResMut<ChangeBuffer>,
-) {
-    for _ in ev_purge.read() {
-        change_buffer.revisions.clear();
-        change_buffer.selection = default();
-    }
-}
-
 fn read_revisions(
     mut ev_log_response: EventReader<LogResponseEvent>,
     mut change_buffer: ResMut<ChangeBuffer>,
 ) {
-    for LogResponseEvent(revision) in ev_log_response.read() {
-        change_buffer.revisions.push(revision.clone());
+    for LogResponseEvent(revisions) in ev_log_response.read() {
+        if change_buffer.revisions.is_empty() {
+            change_buffer.selection = IndexSelection::Single(0);
+            change_buffer.revisions = revisions.clone();
+            continue;
+        }
+
+        match change_buffer.selection {
+            // Select the same change by change_id if it exists
+            IndexSelection::Single(i) => {
+                let change_id = &change_buffer.revisions[i].change_id;
+                let index = (revisions.iter())
+                    .position(|r| r.change_id.0 == *change_id.0)
+                    .unwrap_or(0);
+
+                change_buffer.selection = IndexSelection::Single(index);
+                change_buffer.revisions = revisions.clone();
+            }
+
+            // Select the range of commits with the same start and end change_id if they exist
+            IndexSelection::Range(start_prev, end_prev) => {
+                let start_change_id = &change_buffer.revisions[start_prev].change_id;
+                let end_change_id = &change_buffer.revisions[end_prev].change_id;
+
+                change_buffer.selection = (revisions.iter())
+                    .position(|r| r.change_id.0 == *start_change_id.0)
+                    .zip((revisions.iter()).position(|r| r.change_id.0 == *end_change_id.0))
+                    .map(|(start, end)| IndexSelection::Range(start, end))
+                    .unwrap_or(IndexSelection::Single(0));
+                change_buffer.revisions = revisions.clone();
+            }
+        }
     }
 }
 
