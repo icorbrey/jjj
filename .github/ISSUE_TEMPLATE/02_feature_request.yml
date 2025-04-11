@@ -1,0 +1,40 @@
+name: Feature Request
+description: Request a new feature.
+labels: enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for using `jjj`! We appreciate your feedback and suggestions.
+        Please include as many details as possible to help us understand what
+        you're looking for.
+
+  - type: textarea
+    attributes:
+      label: Description
+      description: Describe the feature you would like to see.
+      placeholder: I would like to be able to bake brownies in my oven.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Use Case
+      description: What is the use case for this feature?
+      placeholder: I eat a lot of brownies and I want to bake them at home.
+    validations:
+      required: true
+
+  - type: checkboxes
+    attributes:
+      label: Last Steps
+      description: |
+        By submitting this bug report, you agree to follow our
+        [code of conduct](https://github.com/icorbrey/jjj/blob/trunk/CODE_OF_CONDUCT.md).
+      options:
+        - label: I agree to abide by this project's code of conduct.
+          required: true
+        - label: |
+            I would like to work on this and submit a PR with my changes.
+            (Optional, but contributions are greatly appreciated!)
+          required: false
