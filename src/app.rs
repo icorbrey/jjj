@@ -4,10 +4,9 @@ use std::time::Duration;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*, state::app::StatesPlugin};
 use bevy_ratatui::{event::KeyEvent, RatatuiPlugins};
-use crossterm::event::{KeyCode, KeyEventKind};
-use rand::Rng;
+use crossterm::event::KeyCode;
 
-use crate::{backend, errors::ErrorEvent, events, frontend, screens};
+use crate::{backend, events, frontend, screens};
 
 pub fn plugin(app: &mut App) {
     app.configure_sets(
@@ -36,10 +35,7 @@ pub fn plugin(app: &mut App) {
         backend::plugin,
     ));
 
-    app.add_systems(
-        Update,
-        (read_quit, simulate_error).in_set(AppSet::RecordInput),
-    );
+    app.add_systems(Update, read_quit.in_set(AppSet::RecordInput));
 }
 
 /// Quits the application if the user presses Q.
@@ -47,22 +43,6 @@ fn read_quit(mut ev_keypresses: EventReader<KeyEvent>, mut exit: EventWriter<App
     for keypress in ev_keypresses.read() {
         if let KeyCode::Char('q') = keypress.code {
             exit.send_default();
-        }
-    }
-}
-
-fn simulate_error(mut ev_keypresses: EventReader<KeyEvent>, mut ev_error: EventWriter<ErrorEvent>) {
-    for keypress in ev_keypresses.read() {
-        if keypress.code == KeyCode::Char('e') && keypress.kind == KeyEventKind::Press {
-            let mut rng = rand::rng();
-            let len = rng.random_range(1..100);
-            ev_error.send(ErrorEvent::from(format!(
-                "Simulated error! {}",
-                rng.random_iter::<u8>()
-                    .take(len)
-                    .map(|i| i.to_string())
-                    .collect::<String>()
-            )));
         }
     }
 }
