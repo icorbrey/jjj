@@ -32,6 +32,7 @@ fn init(
     mut commands: Commands,
 ) {
     let root = commands.spawn(ChangeBuffer::default()).id();
+    commands.spawn(CommandLine::default());
     commands.spawn(StatusLine::default());
 
     navigation.focus_as_root(root);
@@ -45,17 +46,19 @@ fn draw(
     mut change_buffer: Query<&mut ChangeBuffer>,
     mut context: ResMut<RatatuiContext>,
     revset_prompt: Query<&RevsetPrompt>,
+    command_line: Query<&CommandLine>,
     error_popup: Query<&ErrorPopup>,
     status_line: Query<&StatusLine>,
     space_menu: Query<&SpaceMenu>,
 ) -> Result<()> {
     let mut change_buffer = change_buffer.get_single_mut()?;
+    let command_line = command_line.get_single()?;
     let status_line = status_line.get_single()?;
 
     context.draw(|frame| {
         frame.render_widget(Clear, frame.area());
 
-        let [buffer_area, status_line_area, _] = Layout::vertical([
+        let [buffer_area, status_line_area, command_line_area] = Layout::vertical([
             Constraint::Fill(1),
             Constraint::Length(1),
             Constraint::Length(1),
@@ -69,6 +72,7 @@ fn draw(
         );
 
         frame.render_widget(status_line, status_line_area);
+        frame.render_widget(command_line, command_line_area);
 
         if let Ok(revset_prompt) = revset_prompt.get_single() {
             frame.render_widget(revset_prompt, buffer_area);
