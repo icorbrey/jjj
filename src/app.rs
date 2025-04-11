@@ -3,8 +3,7 @@
 use std::time::Duration;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*, state::app::StatesPlugin};
-use bevy_ratatui::{event::KeyEvent, RatatuiPlugins};
-use crossterm::event::KeyCode;
+use bevy_ratatui::RatatuiPlugins;
 
 use crate::{backend, events, frontend, screens};
 
@@ -34,17 +33,6 @@ pub fn plugin(app: &mut App) {
         frontend::plugin,
         backend::plugin,
     ));
-
-    app.add_systems(Update, read_quit.in_set(AppSet::RecordInput));
-}
-
-/// Quits the application if the user presses Q.
-fn read_quit(mut ev_keypresses: EventReader<KeyEvent>, mut exit: EventWriter<AppExit>) {
-    for keypress in ev_keypresses.read() {
-        if let KeyCode::Char('q') = keypress.code {
-            exit.send_default();
-        }
-    }
 }
 
 /// Coordinates systems running under the [`Update`] schedule.
