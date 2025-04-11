@@ -56,6 +56,7 @@ fn read_keys(
     mut ev_selection: EventWriter<ChangeBufferSelectionEvent>,
     mut change_buffer: Query<&mut ChangeBuffer>,
     mut ev_keypresses: EventReader<KeyEvent>,
+    mut exit: EventWriter<AppExit>,
     mut navigation: Navigation,
 ) -> Result<()> {
     let mut change_buffer = change_buffer.get_single_mut()?;
@@ -74,6 +75,10 @@ fn read_keys(
         let selection = match (change_buffer.selection.clone(), keypress.code) {
             (_, KeyCode::Char(' ')) => {
                 navigation.spawn_popup(SpaceMenu)?;
+                return Ok(());
+            }
+            (_, KeyCode::Char('q')) => {
+                exit.send_default();
                 return Ok(());
             }
             (IndexSelection::Single(i), KeyCode::Char('j')) => {
