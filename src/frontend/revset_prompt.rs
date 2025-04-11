@@ -25,6 +25,7 @@ pub fn plugin(app: &mut App) {
 #[derive(Component, Debug, Default)]
 pub struct RevsetPrompt {
     input: String,
+    read_input: bool,
 }
 
 #[tracing::instrument(skip_all)]
@@ -35,6 +36,13 @@ fn read_keys(
     mut navigation: Navigation,
 ) -> Result<()> {
     let mut revset_prompt = revset_prompt.get_single_mut()?;
+
+    // Skip the first frame of input so we don't accidentally read the same
+    // keypress that summoned the prompt.
+    if !revset_prompt.read_input {
+        revset_prompt.read_input = true;
+        return Ok(());
+    }
 
     for keypress in ev_keypresses.read() {
         debug!(?keypress.code, ?keypress.kind, revset_prompt.input);
