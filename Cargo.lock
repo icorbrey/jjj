@@ -1158,8 +1158,11 @@ dependencies = [
  "clap",
  "crossterm",
  "lazy_static",
+ "once_cell",
  "ratatui",
  "regex",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
