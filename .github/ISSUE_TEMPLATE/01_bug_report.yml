@@ -1,0 +1,77 @@
+name: Bug Report
+description: Report a bug or issue.
+labels: bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug! Please include as many
+        details as possible to help us understand what's going on. If we cannot
+        reproduce the issue, we may not be able to fix it.
+
+  - type: textarea
+    attributes:
+      label: Description
+      description: Give a quick summary of what happened.
+      placeholder: My oven blew up when I tried to bake a cake!
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps to Reproduce
+      description: What steps can we take to reproduce the bug?
+      placeholder: |
+        1. Preheat the oven to 350 degrees.
+        2. Put the cake in the oven.
+        3. Wait for 30 minutes.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: The cake should have baked perfectly.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: The oven exploded and the cake was ruined.
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: Application Version
+      description: What version did this bug occur in?
+      options:
+        - 0.1.0 (Latest release)
+        - Unreleased
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Platform
+      description: What platform are you using?
+      placeholder: Windows 10/11, macOS 11, Ubuntu 20.04, etc.
+    validations:
+      required: true
+
+  - type: checkboxes
+    attributes:
+      label: Last Steps
+      description: |
+        By submitting this bug report, you agree to follow our
+        [code of conduct](https://github.com/icorbrey/jjj/blob/trunk/CODE_OF_CONDUCT.md).
+      options:
+        - label: I agree to abide by this project's code of conduct.
+          required: true
+        - label: |
+            I would like to work on this and submit a PR with my changes.
+            (Optional, but contributions are greatly appreciated!)
+          required: false
