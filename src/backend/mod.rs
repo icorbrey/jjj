@@ -9,8 +9,11 @@ pub mod log;
 pub mod poll;
 pub mod revisions;
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.add_plugins((log::plugin, poll::plugin));
+
+    debug!("Finished loading");
 }
 
 pub(super) fn execute_jj_command(args: Vec<&str>) -> Result<String> {

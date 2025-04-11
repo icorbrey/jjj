@@ -8,6 +8,7 @@ use ratatui::{
 
 use super::{prelude::*, revset_prompt::RevsetPrompt};
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.add_systems(
         Update,
@@ -15,9 +16,11 @@ pub fn plugin(app: &mut App) {
             .in_set(AppSet::RecordInput)
             .run_if(is_focused::<SpaceMenu>),
     );
+
+    debug!("Finished loading");
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct SpaceMenu;
 
 fn read_keys(mut ev_keypresses: EventReader<KeyEvent>, mut navigation: Navigation) -> Result<()> {

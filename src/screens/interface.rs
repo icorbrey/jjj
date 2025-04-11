@@ -12,6 +12,7 @@ use crate::frontend::prelude::*;
 
 use super::Screen;
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Screen::Interface), init);
 
@@ -21,6 +22,8 @@ pub fn plugin(app: &mut App) {
             .in_set(AppSet::Render)
             .run_if(in_state(Screen::Interface)),
     );
+
+    debug!("Finished loading");
 }
 
 fn init(

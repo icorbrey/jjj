@@ -10,6 +10,7 @@ use crate::backend::{log::LogResponseEvent, revisions::Revision};
 
 use super::prelude::*;
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.add_systems(
         Update,
@@ -22,6 +23,8 @@ pub fn plugin(app: &mut App) {
                 .run_if(in_state(Screen::Interface)),
         ),
     );
+
+    debug!("Finished loading");
 }
 
 #[derive(Event)]

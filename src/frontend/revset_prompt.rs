@@ -10,6 +10,7 @@ use crate::backend::log::LogRevsetEvent;
 
 use super::prelude::*;
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.add_systems(
         Update,
@@ -17,13 +18,16 @@ pub fn plugin(app: &mut App) {
             .in_set(AppSet::RecordInput)
             .run_if(is_focused::<RevsetPrompt>),
     );
+
+    debug!("Finished loading");
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Debug, Default)]
 pub struct RevsetPrompt {
     input: String,
 }
 
+#[tracing::instrument(skip_all)]
 fn read_keys(
     mut ev_log_request: EventWriter<LogRevsetEvent>,
     mut revset_prompt: Query<&mut RevsetPrompt>,
@@ -33,6 +37,8 @@ fn read_keys(
     let mut revset_prompt = revset_prompt.get_single_mut()?;
 
     for keypress in ev_keypresses.read() {
+        debug!(?keypress.code, ?keypress.kind, revset_prompt.input);
+
         if keypress.kind != KeyEventKind::Press {
             continue;
         }
@@ -42,6 +48,8 @@ fn read_keys(
                 let revset = revset_prompt.input.clone();
                 ev_log_request.send(LogRevsetEvent(revset));
                 navigation.go_back()?;
+
+                info!("Switched to revset: {}", revset_prompt.input);
             }
             KeyCode::Esc => {
                 navigation.go_back()?;

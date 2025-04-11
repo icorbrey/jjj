@@ -14,6 +14,7 @@ lazy_static! {
     static ref POLL_INTERVAL_MS: String = env::var("POLL_INTERVAL_MS").unwrap_or("1000".into());
 }
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.register_scoped_type::<PollTimer>(Screen::Interface);
 
@@ -27,6 +28,8 @@ pub fn plugin(app: &mut App) {
         )
             .run_if(in_state(Screen::Interface)),
     );
+
+    debug!("Finished loading");
 }
 
 #[derive(Deref, DerefMut, Reflect, Resource)]
@@ -37,6 +40,7 @@ impl PollTimer {
         poll_timer.tick(time.delta());
     }
 
+    #[tracing::instrument(skip_all)]
     fn check(poll_timer: Res<Self>, mut ev_refresh_log: EventWriter<RefreshLogEvent>) {
         if poll_timer.just_finished() {
             ev_refresh_log.send(default());

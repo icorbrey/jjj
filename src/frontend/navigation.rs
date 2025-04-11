@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use anyhow::{anyhow, Result};
 use bevy::{ecs::system::SystemParam, prelude::*};
 
@@ -5,8 +7,11 @@ pub mod prelude {
     pub use super::{is_focused, Navigation};
 }
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.add_observer(gc_popups);
+
+    debug!("Finished loading");
 }
 
 /// A system parameter for navigation. This is used to focus on entities and
@@ -30,20 +35,24 @@ pub struct Navigation<'w, 's> {
 impl Navigation<'_, '_> {
     /// Returns whether the given entity is currently focused. Only one entity
     /// can be focused at a given time.
+    #[tracing::instrument(skip(self))]
     pub fn is_focused(&self, entity: Entity) -> bool {
         self.focused.get(entity).is_ok()
     }
 
     /// Spawns the given bundle as a popup and focuses it. Popups are despawned
     /// when they lose focus.
-    pub fn spawn_popup(&mut self, bundle: impl Bundle) -> Result<()> {
+    #[tracing::instrument(skip(self))]
+    pub fn spawn_popup(&mut self, bundle: impl Bundle + Debug) -> Result<()> {
         let popup = self.commands.spawn((bundle, Popup)).id();
+        debug!("Spawned popup as entity {:?}", popup);
         self.focus(popup)?;
         Ok(())
     }
 
     /// Assigns the given entity as the navigation root. Only one entity can be
     /// the navigation root at a given time.
+    #[tracing::instrument(skip(self))]
     pub fn focus_as_root(&mut self, entity: Entity) {
         self.reset_stack();
 
@@ -52,10 +61,12 @@ impl Navigation<'_, '_> {
         }
 
         self.commands.entity(entity).insert((NavigationRoot, Focus));
+        debug!("Focused entity as root");
     }
 
     /// Focuses on the given entity. Any other entities which are currently
     /// focused or have breadcrumbs will be removed from the navigation stack.
+    #[tracing::instrument(skip(self))]
     pub fn focus(&mut self, entity: Entity) -> Result<()> {
         if self.is_focused(entity) {
             return Ok(());
@@ -69,6 +80,9 @@ impl Navigation<'_, '_> {
         entity_commands.insert(Focus);
         if entity != root {
             entity_commands.insert(Breadcrumb(root));
+            debug!("Focused entity with root {:?}", root);
+        } else {
+            debug!("Focused root entity");
         }
 
         Ok(())
@@ -80,6 +94,7 @@ impl Navigation<'_, '_> {
     /// ## Errors
     ///
     /// - Fails if there is no currently focused entity.
+    #[tracing::instrument(skip(self))]
     pub fn go_to(&mut self, entity: Entity) -> Result<()> {
         let current = self.focused()?;
 
@@ -88,6 +103,7 @@ impl Navigation<'_, '_> {
             .insert(Breadcrumb(entity));
         self.commands.entity(entity).insert(Focus);
 
+        debug!("Navigated from: {:?}", current);
         Ok(())
     }
 
@@ -98,6 +114,7 @@ impl Navigation<'_, '_> {
     /// ## Errors
     ///
     /// - Fails if there is no currently focused entity.
+    #[tracing::instrument(skip(self))]
     pub fn go_back(&mut self) -> Result<()> {
         let current = self.focused()?;
 
@@ -106,6 +123,10 @@ impl Navigation<'_, '_> {
                 .entity(current)
                 .remove::<(Breadcrumb, Focus)>();
             self.commands.entity(breadcrumb.0).insert(Focus);
+
+            debug!("Navigated back to: {:?}", breadcrumb.0);
+        } else {
+            debug!("Nothing to go back to, no breadcrumbs found.");
         }
 
         Ok(())
@@ -115,10 +136,12 @@ impl Navigation<'_, '_> {
     fn reset_stack(&mut self) {
         for focused in self.focused.iter_mut() {
             self.commands.entity(focused).remove::<Focus>();
+            debug!("Removed focus from: {:?}", focused);
         }
 
         for (entity, _) in self.breadcrumbs.iter_mut() {
             self.commands.entity(entity).remove::<Breadcrumb>();
+            debug!("Removed breadcrumb from: {:?}", entity);
         }
     }
 
@@ -180,6 +203,7 @@ pub struct Breadcrumb(pub Entity);
 #[derive(Component)]
 pub struct Popup;
 
+#[tracing::instrument(skip_all)]
 fn gc_popups(
     unfocused: Trigger<OnRemove, Focus>,
     popups: Query<Entity, With<Popup>>,
@@ -187,5 +211,6 @@ fn gc_popups(
 ) {
     if let Ok(popup) = popups.get(unfocused.entity()) {
         commands.entity(popup).despawn_recursive();
+        debug!("Despawned popup entity {:?}", popup);
     }
 }
