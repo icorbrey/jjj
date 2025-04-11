@@ -12,7 +12,7 @@ use ratatui::{
     widgets::{Clear, Paragraph},
 };
 
-use crate::app::AppSet;
+use crate::{app::AppSet, backend::config::Config};
 
 use super::Screen;
 
@@ -54,12 +54,6 @@ pub fn plugin(app: &mut App) {
 
     debug!("Finished loading");
 }
-
-/// The total max duration the splash screen should be displayed for.
-const SPLASH_DURATION: Duration = Duration::from_millis(1950);
-
-/// The duration between splash screen animation frames.
-const SPLASH_LINE_INTERVAL: Duration = Duration::from_millis(150);
 
 /// The splash screen.
 const SPLASH_LINES: [&str; 8] = [
@@ -134,15 +128,12 @@ impl SplashCursor {
 #[derive(Deref, DerefMut, Reflect, Resource)]
 struct SplashTimer(Timer);
 
-impl Default for SplashTimer {
-    fn default() -> Self {
-        Self(Timer::new(SPLASH_DURATION, TimerMode::Once))
-    }
-}
-
 impl SplashTimer {
-    fn init(mut commands: Commands) {
-        commands.init_resource::<Self>();
+    fn init(mut commands: Commands, config: Res<Config>) {
+        commands.insert_resource(Self(Timer::new(
+            Duration::from_millis(config.splash.total_duration_ms),
+            TimerMode::Once,
+        )));
     }
 
     fn tick(time: Res<Time>, mut timer: ResMut<Self>) {
@@ -164,15 +155,12 @@ impl SplashTimer {
 #[derive(Deref, DerefMut, Reflect, Resource)]
 struct SplashLineTimer(Timer);
 
-impl Default for SplashLineTimer {
-    fn default() -> Self {
-        Self(Timer::new(SPLASH_LINE_INTERVAL, TimerMode::Repeating))
-    }
-}
-
 impl SplashLineTimer {
-    fn init(mut commands: Commands) {
-        commands.init_resource::<Self>();
+    fn init(mut commands: Commands, config: Res<Config>) {
+        commands.insert_resource(Self(Timer::new(
+            Duration::from_millis(config.splash.line_interval_ms),
+            TimerMode::Repeating,
+        )));
     }
 
     fn tick(time: Res<Time>, mut timer: ResMut<Self>) {

@@ -1,22 +1,20 @@
-use std::{env, time::Duration};
+use std::time::Duration;
 
 use bevy::prelude::*;
-use lazy_static::lazy_static;
 
 use crate::{
     app::AppSet,
     backend::log::{LogResponseEvent, RefreshLogEvent},
     screens::Screen,
-    utils::AppExt,
 };
 
-lazy_static! {
-    static ref POLL_INTERVAL_MS: String = env::var("POLL_INTERVAL_MS").unwrap_or("1000".into());
-}
+use super::config::Config;
 
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
-    app.register_scoped_type::<PollTimer>(Screen::Interface);
+    app.register_type::<PollTimer>();
+    app.add_systems(OnEnter(Screen::Interface), PollTimer::init);
+    app.add_systems(OnExit(Screen::Interface), PollTimer::remove);
 
     app.add_systems(
         Update,
@@ -36,6 +34,13 @@ pub fn plugin(app: &mut App) {
 struct PollTimer(Timer);
 
 impl PollTimer {
+    fn init(mut commands: Commands, config: Res<Config>) {
+        commands.insert_resource(Self(Timer::new(
+            Duration::from_millis(config.log.poll_interval_ms),
+            TimerMode::Repeating,
+        )));
+    }
+
     fn tick(mut poll_timer: ResMut<Self>, time: Res<Time>) {
         poll_timer.tick(time.delta());
     }
@@ -53,14 +58,8 @@ impl PollTimer {
             break;
         }
     }
-}
 
-impl Default for PollTimer {
-    fn default() -> Self {
-        let interval = (POLL_INTERVAL_MS.parse::<u64>())
-            .expect("POLL_INTERVAL_MS should have been a valid 64 bit integer");
-
-        let duration = Duration::from_millis(interval);
-        Self(Timer::new(duration, TimerMode::Repeating))
+    fn remove(mut commands: Commands) {
+        commands.remove_resource::<Self>();
     }
 }
