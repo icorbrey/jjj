@@ -5,6 +5,7 @@ use ratatui::{
 };
 
 pub mod change_buffer;
+pub mod command_line;
 pub mod empty_buffer;
 pub mod error_popup;
 pub mod navigation;
@@ -15,6 +16,7 @@ pub mod viewport;
 
 pub mod prelude {
     pub use super::change_buffer::ChangeBuffer;
+    pub use super::command_line::CommandLine;
     pub use super::empty_buffer::EmptyBuffer;
     pub use super::error_popup::ErrorPopup;
     pub use super::navigation::{is_focused, Navigation};
@@ -38,6 +40,7 @@ pub fn plugin(app: &mut App) {
     app.add_plugins((
         change_buffer::plugin,
         revset_prompt::plugin,
+        command_line::plugin,
         error_popup::plugin,
         status_line::plugin,
         navigation::plugin,

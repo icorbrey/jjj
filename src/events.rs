@@ -5,6 +5,7 @@ pub mod prelude {
     pub use crate::backend::log::{LogResponseEvent, LogRevsetEvent, RefreshLogEvent};
     pub use crate::errors::ErrorEvent;
     pub use crate::frontend::change_buffer::ChangeBufferSelectionEvent;
+    pub use crate::frontend::command_line::NotificationEvent;
 }
 
 pub fn plugin(app: &mut App) {
@@ -18,4 +19,5 @@ pub fn plugin(app: &mut App) {
 
     // Frontend events
     app.add_event::<ChangeBufferSelectionEvent>();
+    app.add_event::<NotificationEvent>();
 }
