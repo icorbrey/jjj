@@ -33,6 +33,7 @@ pub mod prelude {
     pub(super) use crate::screens::Screen;
 }
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.add_plugins((
         change_buffer::plugin,
@@ -42,6 +43,8 @@ pub fn plugin(app: &mut App) {
         navigation::plugin,
         space_menu::plugin,
     ));
+
+    debug!("Finished loading");
 }
 
 /// Returns a centered frame within the given area to render to.

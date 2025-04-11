@@ -13,5 +13,6 @@ impl<S: Into<String>> From<S> for ErrorEvent {
 pub fn forward<T>(result: In<Result<T>>, mut ev_errors: EventWriter<ErrorEvent>) {
     if let Err(err) = result.0 {
         ev_errors.send(ErrorEvent::from(format!("{err}")));
+        error!("{err}");
     }
 }

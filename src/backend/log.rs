@@ -21,6 +21,7 @@ pub struct LogResponseEvent(pub Vec<Revision>);
 #[derive(Default, Deref, DerefMut, Reflect, Resource)]
 pub struct CurrentRevset(pub Option<String>);
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.register_scoped_type::<CurrentRevset>(Screen::Interface);
     app.add_systems(
@@ -30,6 +31,8 @@ pub fn plugin(app: &mut App) {
             .in_set(AppSet::Update)
             .run_if(in_state(Screen::Interface)),
     );
+
+    debug!("Finished loading");
 }
 
 const LOG_TEMPLATE: &str = concat!(
@@ -70,6 +73,7 @@ const MATCH_LOG: &str = concat!(
     r#"\]"#,
 );
 
+#[tracing::instrument(skip_all)]
 fn refresh_log(
     mut ev_refresh_log: EventReader<RefreshLogEvent>,
     mut ev_log_revset: EventWriter<LogRevsetEvent>,
@@ -82,12 +86,15 @@ fn refresh_log(
     }
 }
 
+#[tracing::instrument(skip_all)]
 fn read_logs(
     mut ev_log_response: EventWriter<LogResponseEvent>,
     mut ev_log_revset: EventReader<LogRevsetEvent>,
     mut current_revset: ResMut<CurrentRevset>,
 ) -> Result<()> {
     for LogRevsetEvent(revset) in ev_log_revset.read() {
+        debug!("Reading log for revset: {revset}");
+
         let log = execute_jj_command(vec!["log", "-r", revset.as_str(), "-T", LOG_TEMPLATE])
             .map_err(|_| anyhow!("Couldn't read log for revset `{revset}`"))?;
 

@@ -17,6 +17,7 @@ use crate::app::AppSet;
 use super::Screen;
 
 /// Renders the splash screen when entering [`Screen::Splash`].
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.register_type::<SplashLineTimer>();
     app.register_type::<SplashCursor>();
@@ -50,6 +51,8 @@ pub fn plugin(app: &mut App) {
             SplashTimer::remove,
         ),
     );
+
+    debug!("Finished loading");
 }
 
 /// The total max duration the splash screen should be displayed for.

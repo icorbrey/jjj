@@ -7,6 +7,7 @@ use bevy_ratatui::RatatuiPlugins;
 
 use crate::{backend, events, frontend, screens};
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.configure_sets(
         Update,
@@ -33,6 +34,8 @@ pub fn plugin(app: &mut App) {
         frontend::plugin,
         backend::plugin,
     ));
+
+    debug!("Finished loading");
 }
 
 /// Coordinates systems running under the [`Update`] schedule.

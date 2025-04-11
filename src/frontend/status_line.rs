@@ -9,11 +9,14 @@ use crate::backend::log::LogRevsetEvent;
 use super::change_buffer::{ChangeBufferSelectionEvent, RevisionSelection};
 use super::prelude::*;
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (monitor_logged_revset, monitor_selected_revset).in_set(AppSet::Update),
     );
+
+    debug!("Finished loading");
 }
 
 #[derive(Component, Default)]

@@ -7,10 +7,11 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Clear, Padding, Paragraph, Wrap},
 };
 
-use crate::errors::ErrorEvent;
+use crate::{errors::ErrorEvent, logger};
 
 use super::prelude::*;
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     app.add_systems(
         Update,
@@ -21,9 +22,11 @@ pub fn plugin(app: &mut App) {
                 .run_if(is_focused::<ErrorPopup>),
         ),
     );
+
+    debug!("Finished loading");
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Debug, Default)]
 pub struct ErrorPopup {
     pub errors: Vec<String>,
 }
@@ -66,7 +69,10 @@ fn read_keys(
         }
 
         if error_popup.errors.is_empty() {
-            navigation.go_back().unwrap();
+            if let Err(e) = navigation.go_back() {
+                logger::dump();
+                panic!("{}", e);
+            }
         }
     }
 }
@@ -76,10 +82,6 @@ impl Widget for &ErrorPopup {
     where
         Self: Sized,
     {
-        if self.errors.is_empty() {
-            return;
-        }
-
         // Accomodate longer errors if possible
         let max_err_length = self.errors.iter().map(|e| e.len()).max().unwrap_or(0) as u16;
         let width = (max_err_length + 4).clamp(30, (3 * area.width) / 4);
