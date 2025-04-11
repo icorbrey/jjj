@@ -31,10 +31,6 @@ version = "0.15.3"
 default-features = false
 features = ["bevy_state"]
 
-[features]
-default = ["dev"]
-dev = ["bevy/dynamic_linking"]
-
 [lints.clippy]
 too_many_arguments = "allow"
 type_complexity = "allow"
