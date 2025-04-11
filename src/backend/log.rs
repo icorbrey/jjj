@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use bevy::prelude::*;
 use regex::{Captures, Match, Regex};
 
-use crate::{app::AppSet, errors, join, screens::Screen, utils::AppExt};
+use crate::{app::AppSet, errors, events::prelude::*, join, screens::Screen, utils::AppExt};
 
 use super::{
     execute_jj_command,
@@ -88,6 +88,7 @@ fn refresh_log(
 
 #[tracing::instrument(skip_all)]
 fn read_logs(
+    mut ev_notification: EventWriter<NotificationEvent>,
     mut ev_log_response: EventWriter<LogResponseEvent>,
     mut ev_log_revset: EventReader<LogRevsetEvent>,
     mut current_revset: ResMut<CurrentRevset>,
@@ -107,8 +108,14 @@ fn read_logs(
             revs.push(line?)
         }
 
-        ev_log_response.send(LogResponseEvent(revs));
-        current_revset.0 = Some(revset.clone());
+        if !revs.is_empty() {
+            ev_log_response.send(LogResponseEvent(revs));
+            current_revset.0 = Some(revset.clone());
+        } else {
+            ev_notification.send(NotificationEvent::angry(format!(
+                "No revisions found for `{revset}`"
+            )));
+        }
     }
 
     Ok(())
