@@ -1,9 +1,9 @@
 ---
-title: A simple TUI for jj.
-description: Get started building your docs site with Starlight.
+title: A modal interface for Jujutsu.
+description: Rewrite history in the blink of an eye.
 template: splash
 hero:
-  tagline: Make using the already simple VCS even simpler!
+  tagline: Rewrite history in the blink of an eye.
   actions:
     - text: Get started
       link: /guides/installation/
@@ -13,3 +13,50 @@ hero:
       icon: external
       variant: minimal
 ---
+
+import { CardGrid, Card, LinkButton } from "@astrojs/starlight/components";
+
+<CardGrid stagger>
+  <Card title="Move fast, break nothing" icon="rocket">
+    Perform Jujutsu operations at high speed thanks to a powerful and responsive
+    modal interface.
+  </Card>
+  <Card title="Powered by Bevy" icon="puzzle">
+    Bevy's powerful and efficient ECS is what makes `jjj` a successful and
+    maneuverable project!
+  </Card>
+</CardGrid>
+
+## Frequently asked questions
+
+### What's Jujutsu?
+
+Jujutsu is a version control system that utilizes a more intuitive mental model
+for change history and how we interact with it. It takes a lot of good ideas
+from Git, Mercurial, and other legacy tools and merges them into the best
+version control system seen to date. The best part is that Jujutsu is fully
+compatible with Git, so you can use it today with forges like GitHub and Azure
+DevOps!
+
+<LinkButton icon="external" href="https://jj-vcs.github.io/jj/latest/">
+  Learn more about Jujutsu VCS
+</LinkButton>
+
+### Why use Bevy?
+
+Bevy is more than just a game engine! At its core, Bevy is a powerful and
+beautifully ergonomic ECS (Entity-Component-System) framework that lets you
+build applications of any kind. We use Bevy's data engine along with Ratatui to
+build the interface of your dreams.
+
+<LinkButton icon="external" href="https://bevyengine.org">
+  Learn more about Bevy
+</LinkButton>
+
+### Is it any good?
+
+Yes.
+
+### Jujutsu jorts?
+
+Jujutsu jorts.
