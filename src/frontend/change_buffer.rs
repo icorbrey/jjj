@@ -129,6 +129,7 @@ fn read_keys(
 }
 
 fn read_revisions(
+    mut ev_selection: EventWriter<ChangeBufferSelectionEvent>,
     mut ev_log_response: EventReader<LogResponseEvent>,
     mut change_buffer: Query<&mut ChangeBuffer>,
 ) -> Result<()> {
@@ -166,6 +167,18 @@ fn read_revisions(
                 change_buffer.revisions = revisions.clone();
             }
         }
+
+        ev_selection.send(match change_buffer.selection {
+            IndexSelection::Single(i) => ChangeBufferSelectionEvent(RevisionSelection::Single(
+                change_buffer.revisions[i].clone(),
+            )),
+            IndexSelection::Range(start, end) => {
+                ChangeBufferSelectionEvent(RevisionSelection::Range(
+                    change_buffer.revisions[start].clone(),
+                    change_buffer.revisions[end].clone(),
+                ))
+            }
+        });
     }
 
     Ok(())
