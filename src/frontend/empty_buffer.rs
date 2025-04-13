@@ -7,7 +7,7 @@ impl Widget for EmptyBuffer {
     fn render(self, area: Rect, buf: &mut Buffer) {
         Paragraph::new(
             (0..area.height)
-                .map(|_| Line::from("    ~".dim()))
+                .map(|_| Line::from("  ~".dim()))
                 .collect::<Vec<Line>>(),
         )
         .render(area, buf);
