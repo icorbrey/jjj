@@ -13,6 +13,8 @@ use super::prelude::*;
 
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     app.add_systems(
         Update,
         (
@@ -23,7 +25,7 @@ pub fn plugin(app: &mut App) {
         ),
     );
 
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 #[derive(Component, Debug, Default)]

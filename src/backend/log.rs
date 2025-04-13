@@ -23,6 +23,8 @@ pub struct CurrentRevset(pub Option<String>);
 
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     app.register_scoped_type::<CurrentRevset>(Screen::Interface);
     app.add_systems(
         Update,
@@ -32,7 +34,7 @@ pub fn plugin(app: &mut App) {
             .run_if(in_state(Screen::Interface)),
     );
 
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 const LOG_TEMPLATE: &str = concat!(

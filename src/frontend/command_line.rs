@@ -9,6 +9,8 @@ use super::prelude::*;
 pub struct NotificationEvent(pub Notification);
 
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     app.register_type::<NotificationTimeoutTimer>();
     app.init_resource::<NotificationTimeoutTimer>();
 
@@ -24,6 +26,8 @@ pub fn plugin(app: &mut App) {
         )
             .run_if(in_state(Screen::Interface)),
     );
+
+    trace!("Plugin initialized.");
 }
 
 #[derive(Component, Default)]

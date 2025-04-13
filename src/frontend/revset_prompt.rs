@@ -12,6 +12,8 @@ use super::prelude::*;
 
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     app.add_systems(
         Update,
         (read_keys.pipe(errors::forward))
@@ -19,7 +21,7 @@ pub fn plugin(app: &mut App) {
             .run_if(is_focused::<RevsetPrompt>),
     );
 
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 #[derive(Component, Debug, Default)]

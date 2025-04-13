@@ -11,12 +11,14 @@ use super::prelude::*;
 
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     app.add_systems(
         Update,
         (monitor_logged_revset, monitor_selected_revset).in_set(AppSet::Update),
     );
 
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 #[derive(Component, Default)]

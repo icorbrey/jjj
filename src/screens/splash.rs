@@ -19,6 +19,8 @@ use super::Screen;
 /// Renders the splash screen when entering [`Screen::Splash`].
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     app.register_type::<SplashLineTimer>();
     app.register_type::<SplashCursor>();
     app.register_type::<SplashTimer>();
@@ -52,7 +54,7 @@ pub fn plugin(app: &mut App) {
         ),
     );
 
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 /// The splash screen.

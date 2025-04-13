@@ -9,6 +9,8 @@ pub mod prelude {
 }
 
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     // Application-wide events
     app.add_event::<ErrorEvent>();
 
@@ -20,4 +22,6 @@ pub fn plugin(app: &mut App) {
     // Frontend events
     app.add_event::<ChangeBufferSelectionEvent>();
     app.add_event::<NotificationEvent>();
+
+    trace!("Plugin initialized.");
 }

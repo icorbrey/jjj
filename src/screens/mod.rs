@@ -10,6 +10,8 @@ pub mod splash;
 /// Sets up the application screens.
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     app.enable_state_scoped_entities::<Screen>();
     app.init_state::<Screen>();
 
@@ -17,7 +19,7 @@ pub fn plugin(app: &mut App) {
 
     app.add_plugins((splash::plugin, interface::plugin));
 
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 fn init_state(mut next_state: ResMut<NextState<Screen>>, config: Res<Config>) {

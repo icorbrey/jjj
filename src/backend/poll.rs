@@ -12,6 +12,8 @@ use super::config::Config;
 
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     app.register_type::<PollTimer>();
     app.add_systems(OnEnter(Screen::Interface), PollTimer::init);
     app.add_systems(OnExit(Screen::Interface), PollTimer::remove);
@@ -27,7 +29,7 @@ pub fn plugin(app: &mut App) {
             .run_if(in_state(Screen::Interface)),
     );
 
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 #[derive(Deref, DerefMut, Reflect, Resource)]
