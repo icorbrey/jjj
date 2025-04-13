@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use bevy::prelude::*;
 
 #[derive(Clone, Component, Debug, Default, PartialEq, Reflect)]
@@ -9,13 +11,16 @@ pub struct Revision {
     pub is_immutable: bool,
     pub is_empty: bool,
     pub is_root: bool,
+    pub graph: Parts<String>,
+    pub author: String,
+    pub timestamp: String,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Reflect)]
 pub struct ChangeId(pub String, pub usize);
 
 impl ChangeId {
-    pub fn into_parts(&self) -> Parts {
+    pub fn into_parts(&self) -> Parts<&str> {
         let (head, tail) = self.0.split_at(self.1);
         Parts { head, tail }
     }
@@ -25,13 +30,14 @@ impl ChangeId {
 pub struct CommitId(pub String, pub usize);
 
 impl CommitId {
-    pub fn into_parts(&self) -> Parts {
+    pub fn into_parts(&self) -> Parts<&str> {
         let (head, tail) = self.0.split_at(self.1);
         Parts { head, tail }
     }
 }
 
-pub struct Parts<'a> {
-    pub head: &'a str,
-    pub tail: &'a str,
+#[derive(Clone, Debug, Default, PartialEq, Reflect)]
+pub struct Parts<T: Debug + Default> {
+    pub head: T,
+    pub tail: T,
 }

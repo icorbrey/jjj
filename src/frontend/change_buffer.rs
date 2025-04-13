@@ -6,7 +6,10 @@ use ratatui::{
     widgets::Block,
 };
 
-use crate::backend::{log::LogResponseEvent, revisions::Revision};
+use crate::backend::{
+    log::LogResponseEvent,
+    revisions::{ChangeId, CommitId, Revision},
+};
 
 use super::prelude::*;
 
@@ -190,97 +193,187 @@ impl StatefulWidget for ChangeBuffer {
     type State = usize;
 
     fn render(self, area: Rect, buf: &mut Buffer, viewport_y: &mut Self::State) {
-        let (computed_viewport_y, rev_range) = viewport::compute_sliding_window(
-            self.revisions.len(),
-            match self.selection {
-                IndexSelection::Single(index) => index,
-                IndexSelection::Range(_, end) => end,
-            },
+        let selected_rev = match self.selection {
+            IndexSelection::Single(index) => index,
+            IndexSelection::Range(_, end) => end,
+        };
+
+        let lines = (self.revisions.iter().enumerate())
+            .flat_map(|(i, rev)| RevisionLine::vec_from(rev, i == selected_rev))
+            .collect::<Vec<_>>();
+
+        let (computed_viewport_y, line_range) = viewport::compute_sliding_window(
+            lines.len(),
+            2 * selected_rev,
             *viewport_y,
             area.height as usize,
             area.height as usize / 4,
         );
 
         *viewport_y = computed_viewport_y;
-        let revs =
-            self.revisions.iter().enumerate().collect::<Vec<_>>()[rev_range.clone()].to_vec();
+        let lines = &lines[line_range.clone()];
 
         let [revs_area, empty] = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(revs.len() as u16), Constraint::Fill(1)])
+            .constraints([Constraint::Length(lines.len() as u16), Constraint::Fill(1)])
             .areas(area);
 
         let rev_lines = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(rev_range.map(|_| Constraint::Length(1)))
+            .constraints(lines.iter().map(|_| Constraint::Length(1)))
             .split(revs_area);
 
-        for ((i, revision), area) in revs.iter().zip(rev_lines.iter()) {
-            let is_selected = match self.selection {
-                IndexSelection::Single(index) => *i == index,
-                IndexSelection::Range(start_index, end_index) => {
-                    start_index <= *i && *i <= end_index
-                }
-            };
-
-            if is_selected {
-                Block::default()
-                    .style(Style::new().on_dark_gray())
-                    .render(*area, buf);
-            }
-
-            let mut left = Line::from("    ");
-
-            let change_id = revision.change_id.into_parts();
-
-            left += Span::styled(change_id.head, Style::new().not_dim().light_magenta());
-            left += Span::styled(change_id.tail, Style::new().dim());
-
-            if revision.is_root {
-                left += Span::styled(" root()", Style::new().green());
-            } else {
-                if revision.is_empty {
-                    left += Span::styled(" empty()", Style::new().green());
-                }
-
-                if let Some(description) = (revision.description.clone())
-                    .and_then(|d| d.lines().nth(0).map(|d| d.to_string()))
-                {
-                    left += Span::from(format!(" {description}"));
-                } else {
-                    left += Span::styled(
-                        " (no description set)",
-                        if revision.is_empty {
-                            Style::new().green()
-                        } else {
-                            Style::new().yellow()
-                        },
-                    );
-                }
-            }
-
-            let mut right = Line::default();
-
-            let commit_id = revision.commit_id.into_parts();
-
-            right += Span::styled(commit_id.head, Style::new().not_dim().blue());
-            right += Span::styled(commit_id.tail, Style::new().dim());
-
-            right += Span::from(" ");
-
-            let [left_area, _, right_area] = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([
-                    Constraint::Length(left.width() as u16),
-                    Constraint::Fill(1),
-                    Constraint::Length(right.width() as u16),
-                ])
-                .areas(*area);
-
-            left.render(left_area, buf);
-            right.render(right_area, buf);
+        for (line, area) in lines.iter().zip(rev_lines.iter()) {
+            line.clone().render(*area, buf);
         }
 
         EmptyBuffer.render(empty, buf);
+    }
+}
+
+#[derive(Clone)]
+enum RevisionLine {
+    Top(RevisionTopLine),
+    Bottom(RevisionBottomLine),
+}
+
+impl RevisionLine {
+    fn vec_from(revision: &Revision, is_selected: bool) -> Vec<Self> {
+        let graph = revision.graph.clone();
+        vec![
+            RevisionLine::Top(RevisionTopLine {
+                graph: graph.head,
+                change_id: revision.change_id.clone(),
+                commit_id: revision.commit_id.clone(),
+                is_root: revision.is_root,
+                is_selected,
+                author: revision.author.clone(),
+                timestamp: revision.timestamp.clone(),
+            }),
+            RevisionLine::Bottom(RevisionBottomLine {
+                graph: graph.tail,
+                is_empty: revision.is_empty,
+                description: revision.description.clone(),
+                is_selected,
+            }),
+        ]
+    }
+}
+
+impl Widget for RevisionLine {
+    fn render(self, area: Rect, buf: &mut Buffer)
+    where
+        Self: Sized,
+    {
+        match self {
+            RevisionLine::Top(top) => top.render(area, buf),
+            RevisionLine::Bottom(bottom) => bottom.render(area, buf),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct RevisionTopLine {
+    graph: String,
+    change_id: ChangeId,
+    commit_id: CommitId,
+    is_root: bool,
+    is_selected: bool,
+    author: String,
+    timestamp: String,
+}
+
+impl Widget for RevisionTopLine {
+    fn render(self, area: Rect, buf: &mut Buffer)
+    where
+        Self: Sized,
+    {
+        let mut left = Line::from("  ");
+
+        let change_id = self.change_id.into_parts();
+
+        left += Span::from(self.graph.clone());
+        left += Span::styled(change_id.head, Style::new().not_dim().light_magenta());
+        left += Span::styled(change_id.tail, Style::new().dim());
+
+        if self.is_root {
+            left += Span::styled(" root()", Style::new().green());
+        } else {
+            left += Span::styled(format!(" {}", self.author), Style::new().yellow());
+            left += Span::styled(format!(" {}", self.timestamp), Style::new().cyan());
+        }
+
+        let mut right = Line::default();
+
+        let commit_id = self.commit_id.into_parts();
+
+        right += Span::styled(commit_id.head, Style::new().not_dim().blue());
+        right += Span::styled(commit_id.tail, Style::new().dim());
+
+        right += Span::from(" ");
+
+        let [left_area, _, right_area] = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Length(left.width() as u16),
+                Constraint::Fill(1),
+                Constraint::Length(right.width() as u16),
+            ])
+            .areas(area);
+
+        if self.is_selected {
+            Block::default()
+                .style(Style::new().on_dark_gray())
+                .render(area, buf)
+        }
+
+        left.render(left_area, buf);
+        right.render(right_area, buf);
+    }
+}
+
+#[derive(Clone)]
+struct RevisionBottomLine {
+    graph: String,
+    is_empty: bool,
+    description: Option<String>,
+    is_selected: bool,
+}
+
+impl Widget for RevisionBottomLine {
+    fn render(self, area: Rect, buf: &mut Buffer)
+    where
+        Self: Sized,
+    {
+        let mut bottom = Line::from("  ");
+
+        bottom += Span::from(self.graph.clone());
+
+        if self.is_empty {
+            bottom += Span::styled("(empty) ", Style::new().green());
+        }
+
+        if let Some(description) =
+            (self.description.clone()).and_then(|d| d.lines().nth(0).map(|d| d.to_string()))
+        {
+            bottom += Span::from(format!("{description} "));
+        } else {
+            bottom += Span::styled(
+                "(no description set) ",
+                if self.is_empty {
+                    Style::new().green()
+                } else {
+                    Style::new().yellow()
+                },
+            );
+        }
+
+        if self.is_selected {
+            Block::default()
+                .style(Style::new().on_dark_gray())
+                .render(area, buf)
+        }
+
+        bottom.render(area, buf);
     }
 }
