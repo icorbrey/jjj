@@ -37,6 +37,8 @@ pub mod prelude {
 
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     app.add_plugins((
         change_buffer::plugin,
         revset_prompt::plugin,
@@ -47,7 +49,7 @@ pub fn plugin(app: &mut App) {
         space_menu::plugin,
     ));
 
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 /// Returns a centered frame within the given area to render to.

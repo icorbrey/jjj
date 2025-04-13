@@ -5,7 +5,9 @@ use serde::{de::DeserializeOwned, Deserialize};
 use super::execute_jj_command;
 
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
     app.insert_resource(init_config());
+    trace!("Plugin initialized.");
 }
 
 #[tracing::instrument(skip_all)]

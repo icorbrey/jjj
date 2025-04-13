@@ -9,6 +9,8 @@ use crate::{backend, events, frontend, screens};
 
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     app.configure_sets(
         Update,
         (
@@ -35,7 +37,7 @@ pub fn plugin(app: &mut App) {
         backend::plugin,
     ));
 
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 /// Coordinates systems running under the [`Update`] schedule.

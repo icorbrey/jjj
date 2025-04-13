@@ -9,9 +9,9 @@ pub mod prelude {
 
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
     app.add_observer(gc_popups);
-
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 /// A system parameter for navigation. This is used to focus on entities and

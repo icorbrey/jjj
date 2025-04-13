@@ -14,6 +14,8 @@ use super::Screen;
 
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
+
     app.add_systems(OnEnter(Screen::Interface), init);
 
     app.add_systems(
@@ -23,7 +25,7 @@ pub fn plugin(app: &mut App) {
             .run_if(in_state(Screen::Interface)),
     );
 
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 fn init(

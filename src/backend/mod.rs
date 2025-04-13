@@ -12,9 +12,9 @@ pub mod revisions;
 
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
+    trace!("Initializing plugin...");
     app.add_plugins((log::plugin, poll::plugin, config::plugin));
-
-    debug!("Finished loading");
+    trace!("Plugin initialized.");
 }
 
 pub(super) fn execute_jj_command(args: Vec<&str>) -> Result<String> {
