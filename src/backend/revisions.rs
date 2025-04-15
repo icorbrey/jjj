@@ -14,6 +14,7 @@ pub struct Revision {
     pub graph: Parts<String>,
     pub author: String,
     pub timestamp: String,
+    pub bookmarks: Vec<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Reflect)]

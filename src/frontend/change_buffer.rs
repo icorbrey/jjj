@@ -249,6 +249,7 @@ impl RevisionLine {
                 is_selected,
                 author: revision.author.clone(),
                 timestamp: revision.timestamp.clone(),
+                bookmarks: revision.bookmarks.clone(),
             }),
             RevisionLine::Bottom(RevisionBottomLine {
                 graph: graph.tail,
@@ -281,6 +282,7 @@ struct RevisionTopLine {
     is_selected: bool,
     author: String,
     timestamp: String,
+    bookmarks: Vec<String>,
 }
 
 impl Widget for RevisionTopLine {
@@ -303,7 +305,15 @@ impl Widget for RevisionTopLine {
             left += Span::styled(format!(" {}", self.timestamp), Style::new().cyan());
         }
 
-        let mut right = Line::default();
+        // In case the window isn't wide enough for both left and right sides, make sure the left
+        // side is legible and separate.
+        left += "  ".into();
+
+        let mut right = Line::default().alignment(Alignment::Right);
+
+        for bookmark in self.bookmarks.iter() {
+            right += Span::styled(format!("{bookmark} "), Style::new().magenta());
+        }
 
         let commit_id = self.commit_id.into_parts();
 
@@ -312,13 +322,9 @@ impl Widget for RevisionTopLine {
 
         right += Span::from(" ");
 
-        let [left_area, _, right_area] = Layout::default()
+        let [left_area, right_area] = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Length(left.width() as u16),
-                Constraint::Fill(1),
-                Constraint::Length(right.width() as u16),
-            ])
+            .constraints([Constraint::Length(left.width() as u16), Constraint::Fill(1)])
             .areas(area);
 
         if self.is_selected {
@@ -327,8 +333,8 @@ impl Widget for RevisionTopLine {
                 .render(area, buf)
         }
 
-        left.render(left_area, buf);
         right.render(right_area, buf);
+        left.render(left_area, buf);
     }
 }
 
