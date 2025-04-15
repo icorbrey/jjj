@@ -51,6 +51,7 @@ const DETAILS_TEMPLATE: &str = concat!(
             "commit_id.shortest(8)",
             "author",
             "format_timestamp(author.timestamp())",
+            "bookmarks",
             "divergent",
             "immutable",
             "empty",
@@ -71,6 +72,7 @@ const MATCH_DETAILS: &str = concat!(
             r#"(?P<commit_id>.*)"#,
             r#"(?P<author>.*)"#,
             r#"(?P<timestamp>.*)"#,
+            r#"(?P<bookmarks>.*)"#,
             r#"(?P<divergent>.*)"#,
             r#"(?P<immutable>.*)"#,
             r#"(?P<empty>.*)"#,
@@ -180,6 +182,14 @@ fn parse_line((details_line, description_line): (&str, &str)) -> Result<Option<R
     let author = require(&details_caps, "author")?.as_str().to_string();
     let timestamp = require(&details_caps, "timestamp")?.as_str().to_string();
 
+    let bookmarks = (details_caps.name("bookmarks"))
+        .map(|d| {
+            (d.as_str().trim().split(" "))
+                .map(String::from)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
     let description = (description_caps.name("description"))
         .map(|d| d.as_str().trim().to_string())
         .filter(|d| !d.is_empty());
@@ -206,6 +216,7 @@ fn parse_line((details_line, description_line): (&str, &str)) -> Result<Option<R
         is_root,
         author,
         timestamp,
+        bookmarks,
     }))
 }
 
