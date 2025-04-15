@@ -1,8 +1,8 @@
 [package]
 name = "jjj"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Isaac Corbrey <icorbrey@gmail.com>"]
-description = "A simple TUI for jj."
+description = "A modal interface for Jujutsu."
 edition = "2021"
 homepage = "https://jjj.isaaccorbrey.com"
 repository = "https://github.com/icorbrey/jjj"
