@@ -1,5 +1,6 @@
 use std::ops::Range;
 
+#[tracing::instrument]
 pub fn compute_sliding_window(
     item_length: usize,
     selection: usize,
@@ -16,6 +17,12 @@ pub fn compute_sliding_window(
     } else {
         viewport_y
     };
+
+    tracing::trace!(
+        computed_y,
+        "{:?}",
+        computed_y..usize::min(item_length, computed_y + viewport_height),
+    );
 
     (
         computed_y,
