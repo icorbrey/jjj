@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use bevy::{prelude::*, utils::hashbrown::HashMap};
+use enum_as_inner::EnumAsInner;
 use regex::{Captures, Match, Regex};
 
 use crate::{
@@ -8,37 +9,29 @@ use crate::{
 };
 
 use super::{
-    execute_jj_command,
     revisions::{ChangeId, CommitId, Revision},
+    JujutsuCli,
 };
 
-#[derive(Default, Event)]
+#[derive(Debug, Default, Event)]
 pub struct RefreshLogEvent;
 
-#[derive(Event)]
+#[derive(Clone, Debug, Event, PartialEq)]
 pub struct LogRevsetEvent(pub String);
 
 #[derive(Event, Deref, DerefMut)]
 pub struct LogResponseEvent(pub Vec<LogOutput>);
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, EnumAsInner)]
 pub enum LogOutput {
     Revision(Revision),
     Decoration(String),
 }
 
-impl LogOutput {
-    pub fn revision(&self) -> Option<Revision> {
-        match self {
-            Self::Revision(revision) => Some(revision.clone()),
-            _ => None,
-        }
-    }
-}
-
 #[derive(Default, Deref, DerefMut, Reflect, Resource)]
 pub struct CurrentRevset(pub Option<String>);
 
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");
@@ -74,15 +67,18 @@ fn read_logs(
     mut ev_log_response: EventWriter<LogResponseEvent>,
     mut ev_log_revset: EventReader<LogRevsetEvent>,
     mut current_revset: ResMut<CurrentRevset>,
+    jj_cli: Res<JujutsuCli>,
 ) -> Result<()> {
     for LogRevsetEvent(revset) in ev_log_revset.read() {
         debug!("Reading log for revset: {revset}");
 
-        let details =
-            execute_jj_command(vec!["log", "-r", revset.as_str(), "-T", DETAILS_TEMPLATE])
-                .map_err(|_| anyhow!("Couldn't read log for revset `{revset}`"))?;
+        let details = jj_cli.log(revset, DETAILS_TEMPLATE)?;
+        let descriptions = jj_cli.log(revset, DESCRIPTION_TEMPLATE)?;
 
-        let descriptions = get_descriptions(revset)?;
+        debug!(details);
+        debug!(descriptions);
+
+        let descriptions = parse_descriptions(descriptions)?;
 
         let mut detail_lines = details.lines().peekable();
         let mut results = vec![];
@@ -193,6 +189,7 @@ const MATCH_DETAILS: &str = concat!(
     r#"\]\n(?P<graph_tail>.*?)%JJJ%$"#,
 );
 
+#[derive(Debug)]
 struct Details {
     change_id: ChangeId,
     commit_id: CommitId,
@@ -206,10 +203,15 @@ struct Details {
     bookmarks: Vec<String>,
 }
 
+#[tracing::instrument]
 fn parse_details(lines: &str) -> Result<Option<Details>> {
+    trace!("Attempting match");
+
     let Some(details_caps) = Regex::new(MATCH_DETAILS)?.captures(lines) else {
         return Ok(None);
     };
+
+    trace!("{:?}", details_caps);
 
     let change_id = require(&details_caps, "change_id")?.as_str().to_string();
     let change_id_shortest = require(&details_caps, "change_id_shortest")?.as_str().len();
@@ -223,6 +225,7 @@ fn parse_details(lines: &str) -> Result<Option<Details>> {
     let bookmarks = (details_caps.name("bookmarks"))
         .map(|d| {
             (d.as_str().trim().split(" "))
+                .filter(|x| !x.is_empty())
                 .map(String::from)
                 .collect::<Vec<_>>()
         })
@@ -268,19 +271,9 @@ const MATCH_DESCRIPTION: &str = concat!(
     r#"\]"#,
 );
 
-fn get_descriptions(revset: &str) -> Result<HashMap<String, String>> {
-    let response = execute_jj_command(vec![
-        "log",
-        "--no-graph",
-        "-r",
-        revset,
-        "-T",
-        DESCRIPTION_TEMPLATE,
-    ])
-    .map_err(|_| anyhow!("Couldn't read log for revset `{revset}`"))?;
-
+fn parse_descriptions(descriptions: String) -> Result<HashMap<String, String>> {
     let mut map = HashMap::new();
-    for line in response.split("%JJJ%") {
+    for line in descriptions.split("%JJJ%") {
         let Some((change_id, description)) = parse_description(line)? else {
             continue;
         };
@@ -309,4 +302,234 @@ fn parse_description(line: &str) -> Result<Option<(String, String)>> {
 fn require<'a>(caps: &Captures<'a>, name: &str) -> Result<Match<'a>> {
     caps.name(name)
         .ok_or(anyhow!("Couldn't find `{name}` in captures: {caps:?}"))
+}
+
+#[cfg(test)]
+mod tests {
+
+    use bevy::ecs::system::RunSystemOnce;
+
+    use crate::{backend::JujutsuCli, events};
+
+    use super::*;
+
+    #[test]
+    fn refresh_log() -> Result<()> {
+        let mut app = App::new();
+
+        app.add_plugins(events::plugin);
+        app.add_systems(Update, super::refresh_log);
+
+        app.init_resource::<CurrentRevset>();
+
+        app.update();
+
+        // Nothing happens when no refresh event has been sent.
+        (app.world_mut()).run_system_once(
+            |ev_log_revset: EventReader<LogRevsetEvent>,
+             mut ev_refresh_log: EventWriter<RefreshLogEvent>| {
+                assert!(ev_log_revset.is_empty());
+                ev_refresh_log.send(default());
+            },
+        )?;
+
+        app.update();
+
+        // Nothing happens when a refresh event has been sent but there's no current revset.
+        (app.world_mut()).run_system_once(
+            |ev_log_revset: EventReader<LogRevsetEvent>,
+             mut current_revset: ResMut<CurrentRevset>,
+             mut ev_refresh_log: EventWriter<RefreshLogEvent>| {
+                assert!(ev_log_revset.is_empty());
+                current_revset.0 = Some("foo".to_string());
+                ev_refresh_log.send(default());
+            },
+        )?;
+
+        app.update();
+
+        // A log revset event is sent when a revset is currently selected and a refresh event is
+        // sent.
+        (app.world_mut()).run_system_once(|mut ev_log_revset: EventReader<LogRevsetEvent>| {
+            assert!(!ev_log_revset.is_empty());
+            for ev in ev_log_revset.read() {
+                assert_eq!(ev, &LogRevsetEvent("foo".to_string()));
+            }
+        })?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn read_logs() -> Result<()> {
+        let mut app = App::new();
+
+        app.add_plugins(events::plugin);
+        app.add_systems(Update, super::read_logs.pipe(errors::forward));
+
+        app.init_resource::<CurrentRevset>();
+        app.insert_resource(JujutsuCli::mock(|_| Ok(String::new())));
+
+        app.update();
+
+        // Nothing happens when no log revset event is sent.
+        (app.world_mut()).run_system_once(
+            |ev_notification: EventReader<NotificationEvent>,
+             mut ev_log_revset: EventWriter<LogRevsetEvent>,
+             ev_log_response: EventReader<LogResponseEvent>,
+             ev_error: EventReader<ErrorEvent>| {
+                assert!(ev_notification.is_empty());
+                assert!(ev_log_response.is_empty());
+                assert!(ev_error.is_empty());
+
+                ev_log_revset.send(LogRevsetEvent("test".into()));
+            },
+        )?;
+
+        app.insert_resource(JujutsuCli::mock(|_| Err(anyhow!("foo"))));
+
+        app.update();
+
+        // Jujutus CLI errors are forwarded to the error notifier.
+        (app.world_mut()).run_system_once(
+            |mut ev_log_revset: EventWriter<LogRevsetEvent>,
+             mut ev_error: EventReader<ErrorEvent>| {
+                assert_eq!(ev_error.len(), 1);
+                for ev in ev_error.read() {
+                    assert_eq!(ev.as_str(), "Couldn't read log for revset `test`");
+                }
+
+                ev_log_revset.send(LogRevsetEvent("test".into()));
+            },
+        )?;
+
+        app.insert_resource(JujutsuCli::mock(|_| Ok(String::new())));
+
+        app.update();
+
+        // Empty revsets are sent to the gulag.
+        (app.world_mut()).run_system_once(
+            |mut ev_notification: EventReader<NotificationEvent>,
+             mut ev_log_revset: EventWriter<LogRevsetEvent>,
+             ev_log_response: EventReader<LogResponseEvent>,
+             ev_error: EventReader<ErrorEvent>| {
+                assert_eq!(ev_error.len(), 1);
+
+                assert!(!ev_notification.is_empty());
+                assert!(ev_log_response.is_empty());
+
+                assert_eq!(ev_notification.len(), 1);
+                for ev in ev_notification.read() {
+                    assert!(ev.angry);
+                    assert_eq!(ev.message, String::from("No revisions found for `test`"));
+                }
+
+                ev_log_revset.send(LogRevsetEvent("test".into()));
+            },
+        )?;
+
+        app.insert_resource(JujutsuCli::mock(|args| {
+            Ok(if args.iter().any(|s| s.contains("description")) {
+                [
+                    ["abcdefgh", "Change 1\n\nLots of cool things!\n"],
+                    ["hgfedcba", ""],
+                ]
+                .map(|l| format!("[{}]%JJJ%", l.join("&JJJ&")))
+                .join("")
+            } else {
+                [
+                    (
+                        "foo",
+                        [
+                            "a",
+                            "abcdefgh",
+                            "12",
+                            "12345678",
+                            "John Smith",
+                            "2 days ago",
+                            "",
+                            "true",
+                            "false",
+                            "true",
+                            "false",
+                        ],
+                        "bar",
+                    ),
+                    (
+                        "kek",
+                        [
+                            "hgf",
+                            "hgfedcba",
+                            "8765",
+                            "87654321",
+                            "Jane Doe",
+                            "5 minutes ago",
+                            "trunk",
+                            "false",
+                            "true",
+                            "false",
+                            "true",
+                        ],
+                        "lel",
+                    ),
+                ]
+                .map(|(head, l, tail)| format!("{head}[{}]\n{tail}%JJJ%", l.join("&JJJ&")))
+                .join("\nDECOR\n")
+            })
+        }));
+
+        app.update();
+
+        // Empty revsets are sent to the gulag.
+        (app.world_mut()).run_system_once(
+            |mut ev_log_response: EventReader<LogResponseEvent>,
+             ev_notification: EventReader<NotificationEvent>| {
+                assert_eq!(ev_notification.len(), 1);
+
+                assert_eq!(ev_log_response.len(), 1);
+                for ev in ev_log_response.read() {
+                    assert_eq!(
+                        ev.0,
+                        vec![
+                            LogOutput::Revision(Revision {
+                                change_id: ChangeId("abcdefgh".into(), 1),
+                                commit_id: CommitId("12345678".into(), 2),
+                                author: "John Smith".into(),
+                                description: Some("Change 1\n\nLots of cool things!".into()),
+                                timestamp: "2 days ago".into(),
+                                bookmarks: vec![],
+                                is_divergent: true,
+                                is_immutable: false,
+                                is_empty: true,
+                                is_root: false,
+                                graph: Parts {
+                                    head: "foo".into(),
+                                    tail: "bar".into()
+                                }
+                            }),
+                            LogOutput::Decoration("DECOR".into()),
+                            LogOutput::Revision(Revision {
+                                change_id: ChangeId("hgfedcba".into(), 3),
+                                commit_id: CommitId("87654321".into(), 4),
+                                author: "Jane Doe".into(),
+                                description: None,
+                                timestamp: "5 minutes ago".into(),
+                                bookmarks: vec!["trunk".into()],
+                                is_divergent: false,
+                                is_immutable: true,
+                                is_empty: false,
+                                is_root: true,
+                                graph: Parts {
+                                    head: "kek".into(),
+                                    tail: "lel".into()
+                                }
+                            }),
+                        ]
+                    );
+                }
+            },
+        )?;
+
+        Ok(())
+    }
 }

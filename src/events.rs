@@ -8,6 +8,7 @@ pub mod prelude {
     pub use crate::frontend::command_line::NotificationEvent;
 }
 
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");
 

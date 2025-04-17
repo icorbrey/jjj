@@ -1,0 +1,24 @@
+---
+source: src/frontend/change_buffer.rs
+expression: terminal.backend()
+---
+"  >  12345678 John Smith 2 days ago                            one two abcdefgh "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "

@@ -12,6 +12,7 @@ use crate::frontend::prelude::*;
 
 use super::Screen;
 
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");

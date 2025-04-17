@@ -2,27 +2,14 @@ use anyhow::anyhow;
 use bevy::prelude::*;
 use serde::{de::DeserializeOwned, Deserialize};
 
-use super::execute_jj_command;
+use super::JujutsuCli;
 
+#[mutants::skip]
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");
-    app.insert_resource(init_config());
+    app.init_resource::<Config>();
     trace!("Plugin initialized.");
-}
-
-#[tracing::instrument(skip_all)]
-fn init_config() -> Config {
-    let config_toml = execute_jj_command(vec!["config", "list"])
-        .map_err(|e| anyhow!("Failed to read config: {e}"))
-        .unwrap();
-
-    let root = toml::de::from_str::<ConfigRoot>(&config_toml)
-        .map_err(|e| anyhow!("Failed to parse config: {e}"))
-        .unwrap();
-
-    info!("{:?}", &root.jjj);
-
-    root.jjj
 }
 
 #[allow(unused)]
@@ -32,13 +19,13 @@ struct ConfigRoot {
     jjj: Config,
 }
 
+#[mutants::skip]
 fn default_table<De: DeserializeOwned>() -> De {
     toml::de::from_str::<De>("").unwrap()
 }
 
 /// Application configuration.
-#[derive(Debug, Deserialize, Reflect, Resource)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Deserialize, PartialEq, Eq, Reflect, Resource)]
 pub struct Config {
     /// Logging configuration.
     #[serde(default = "default_table")]
@@ -49,9 +36,31 @@ pub struct Config {
     pub splash: SplashConfig,
 }
 
+impl FromWorld for Config {
+    fn from_world(world: &mut World) -> Self {
+        let jj_cli = world.resource::<JujutsuCli>();
+
+        let config_toml = jj_cli.list_config().unwrap();
+
+        let root = toml::de::from_str::<ConfigRoot>(&config_toml)
+            .map_err(|e| anyhow!("Failed to parse config: {e}"))
+            .unwrap();
+
+        info!("{:?}", &root.jjj);
+
+        root.jjj
+    }
+}
+
+impl Config {
+    #[mutants::skip]
+    pub fn default() -> Self {
+        default_table()
+    }
+}
+
 /// Configuration for logging.
-#[derive(Debug, Deserialize, Reflect)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Deserialize, PartialEq, Eq, Reflect)]
 pub struct LogConfig {
     /// How frequently jjj should check the status of the current repo.
     #[serde(default = "LogConfig::default_poll_interval_ms")]
@@ -59,14 +68,14 @@ pub struct LogConfig {
 }
 
 impl LogConfig {
+    #[mutants::skip]
     fn default_poll_interval_ms() -> u64 {
         1000
     }
 }
 
 /// Configuration for the splash screen.
-#[derive(Debug, Deserialize, Reflect)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Deserialize, PartialEq, Eq, Reflect)]
 pub struct SplashConfig {
     /// Whether to skip the splash screen on startup.
     #[serde(default)]
@@ -82,11 +91,60 @@ pub struct SplashConfig {
 }
 
 impl SplashConfig {
+    #[mutants::skip]
     fn default_total_duration_ms() -> u64 {
         1950
     }
 
+    #[mutants::skip]
     fn default_line_interval_ms() -> u64 {
         150
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn loads_blank_config() {
+        let mut app = App::new();
+
+        app.insert_resource(JujutsuCli::mock(|_| Ok("".into())));
+        app.init_resource::<Config>();
+
+        assert_eq!(app.world().get_resource::<Config>(), Some(&default_table()));
+    }
+
+    #[test]
+    fn loads_populated_config() {
+        let mut app = App::new();
+
+        app.insert_resource(JujutsuCli::mock(|_| {
+            Ok(r#"
+                ui.editor = "hx"
+                jjj.log.poll_interval_ms = 123
+                jjj.splash.skip = true
+                jjj.splash.total_duration_ms = 4567
+            "#
+            .into())
+        }));
+        app.init_resource::<Config>();
+
+        assert_eq!(
+            app.world().get_resource::<Config>(),
+            Some(&Config {
+                log: LogConfig {
+                    poll_interval_ms: 123,
+                    ..default_table()
+                },
+                splash: SplashConfig {
+                    skip: true,
+                    total_duration_ms: 4567,
+                    ..default_table()
+                },
+                ..default_table()
+            })
+        );
     }
 }

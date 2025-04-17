@@ -1,0 +1,24 @@
+---
+source: src/frontend/space_menu.rs
+expression: terminal.backend()
+---
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                        ┌──────────────────────┐"
+"                                                        │ r  Select revset     │"
+"                                                        └──────────────────────┘"
+"                                                                                "
+"                                                                                "

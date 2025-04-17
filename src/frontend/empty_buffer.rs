@@ -13,3 +13,20 @@ impl Widget for EmptyBuffer {
         .render(area, buf);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+    use ratatui::backend::TestBackend;
+
+    use super::*;
+
+    #[test]
+    fn snapshot_command_line() {
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(EmptyBuffer, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
+    }
+}

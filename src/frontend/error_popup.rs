@@ -11,6 +11,7 @@ use crate::{errors::ErrorEvent, logger};
 
 use super::prelude::*;
 
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");
@@ -84,6 +85,10 @@ impl Widget for &ErrorPopup {
     where
         Self: Sized,
     {
+        if self.errors.is_empty() {
+            return;
+        }
+
         // Accomodate longer errors if possible
         let max_err_length = self.errors.iter().map(|e| e.len()).max().unwrap_or(0) as u16;
         let width = (max_err_length + 4).clamp(30, (3 * area.width) / 4);
@@ -112,5 +117,50 @@ impl Widget for &ErrorPopup {
 
         Clear.render(center, buf);
         paragraph.render(center, buf);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+    use ratatui::backend::TestBackend;
+
+    use super::*;
+
+    #[test]
+    fn snapshot_no_errors() {
+        let popup = ErrorPopup::default();
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(&popup, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
+    }
+
+    #[test]
+    fn snapshot_one_error() {
+        let popup = ErrorPopup {
+            errors: vec!["error".into()],
+        };
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(&popup, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
+    }
+
+    #[test]
+    fn snapshot_many_errors() {
+        let popup = ErrorPopup {
+            errors: (0..20).map(|i| format!("error {i}")).collect(),
+        };
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(&popup, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
     }
 }

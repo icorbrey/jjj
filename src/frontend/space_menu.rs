@@ -8,6 +8,7 @@ use ratatui::{
 
 use super::{prelude::*, revset_prompt::RevsetPrompt};
 
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");
@@ -68,5 +69,22 @@ impl Widget for &SpaceMenu {
 
         Clear.render(prompt_area, buf);
         prompt.render(prompt_area, buf);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+    use ratatui::backend::TestBackend;
+
+    use super::*;
+
+    #[test]
+    fn snapshot_revset_prompt() {
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(&SpaceMenu, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
     }
 }

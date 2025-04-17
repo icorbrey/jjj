@@ -8,6 +8,7 @@ pub mod interface;
 pub mod splash;
 
 /// Sets up the application screens.
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");

@@ -9,6 +9,7 @@ use crate::backend::log::LogRevsetEvent;
 use super::change_buffer::{ChangeBufferSelectionEvent, RevisionSelection};
 use super::prelude::*;
 
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");
@@ -98,5 +99,69 @@ impl Widget for &StatusLine {
         Block::default().on_white().render(status_line_area, buf);
         selected_revset.render(selected_revset_area, buf);
         logged_revset.render(logged_revset_area, buf);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+    use ratatui::backend::TestBackend;
+
+    use crate::backend::revisions::{ChangeId, Revision};
+
+    use super::*;
+
+    #[test]
+    fn snapshot_selected_revset_single() {
+        let line = StatusLine {
+            selected_revset: Some(RevisionSelection::Single(Revision {
+                change_id: ChangeId("foo".into(), 3),
+                ..default()
+            })),
+            ..default()
+        };
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(&line, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
+    }
+
+    #[test]
+    fn snapshot_selected_revset_range() {
+        let line = StatusLine {
+            selected_revset: Some(RevisionSelection::Range(
+                Revision {
+                    change_id: ChangeId("foo".into(), 3),
+                    ..default()
+                },
+                Revision {
+                    change_id: ChangeId("bar".into(), 3),
+                    ..default()
+                },
+            )),
+            ..default()
+        };
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(&line, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
+    }
+
+    #[test]
+    fn snapshot_logged_revset() {
+        let line = StatusLine {
+            logged_revset: Some("lel".into()),
+            ..default()
+        };
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(&line, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
     }
 }

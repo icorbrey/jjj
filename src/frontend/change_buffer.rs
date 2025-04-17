@@ -14,6 +14,7 @@ use crate::backend::{
 
 use super::prelude::*;
 
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");
@@ -143,7 +144,9 @@ fn read_revisions(
     let mut change_buffer = change_buffer.get_single_mut()?;
 
     for LogResponseEvent(log_output) in ev_log_response.read() {
-        let revisions = log_output.iter().filter_map(LogOutput::revision).collect();
+        let revisions = (log_output.iter())
+            .filter_map(|l| l.clone().into_revision().ok())
+            .collect();
 
         if change_buffer.log_output.is_empty() {
             change_buffer.selection = IndexSelection::Single(0);
@@ -209,7 +212,7 @@ impl StatefulWidget for ChangeBuffer {
             let revision = &self.revisions[i];
             let line_index = (self.log_output.iter())
                 .position(|l| {
-                    l.revision()
+                    l.as_revision()
                         .is_some_and(|r| r.change_id.0 == revision.change_id.0)
                 })
                 .ok_or_else(|| {
@@ -465,5 +468,63 @@ impl Widget for DecorationLine {
         }
 
         Span::styled(format!("  {}", self.text), Style::new().dim()).render(area, buf);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+    use ratatui::backend::TestBackend;
+
+    use super::*;
+
+    #[test]
+    fn snapshot_revision_top_line() {
+        let line = RevisionTopLine {
+            change_id: ChangeId("12345678".into(), 1),
+            commit_id: CommitId("abcdefgh".into(), 2),
+            graph: ">  ".into(),
+            is_root: false,
+            is_selected: true,
+            author: "John Smith".into(),
+            timestamp: "2 days ago".into(),
+            bookmarks: vec!["one".into(), "two".into()],
+        };
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(line, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
+    }
+
+    #[test]
+    fn snapshot_revision_bottom_line() {
+        let line = RevisionBottomLine {
+            description: Some("This is a test".into()),
+            graph: "|  ".into(),
+            is_empty: true,
+            is_selected: false,
+        };
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(line, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
+    }
+
+    #[test]
+    fn snapshot_decoration_line() {
+        let line = DecorationLine {
+            text: "~  (elided revisions)".into(),
+            is_selected: true,
+        };
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(line, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
     }
 }
