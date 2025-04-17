@@ -193,18 +193,18 @@ impl StatefulWidget for ChangeBuffer {
     type State = usize;
 
     fn render(self, area: Rect, buf: &mut Buffer, viewport_y: &mut Self::State) {
-        let selected_rev = match self.selection {
-            IndexSelection::Single(index) => index,
-            IndexSelection::Range(_, end) => end,
+        let selected_revs = match self.selection {
+            IndexSelection::Single(index) => index..=index,
+            IndexSelection::Range(start, end) => start..=end,
         };
 
         let lines = (self.revisions.iter().enumerate())
-            .flat_map(|(i, rev)| RevisionLine::vec_from(rev, i == selected_rev))
+            .flat_map(|(i, rev)| RevisionLine::vec_from(rev, selected_revs.contains(&i)))
             .collect::<Vec<_>>();
 
         let (computed_viewport_y, line_range) = viewport::compute_sliding_window(
             lines.len(),
-            2 * selected_rev,
+            2 * selected_revs.end(),
             *viewport_y,
             area.height as usize,
             area.height as usize / 4,
