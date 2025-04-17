@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use bevy::prelude::*;
 use bevy_ratatui::event::KeyEvent;
 use crossterm::event::{KeyCode, KeyEventKind};
@@ -7,7 +8,7 @@ use ratatui::{
 };
 
 use crate::backend::{
-    log::LogResponseEvent,
+    log::{LogOutput, LogResponseEvent},
     revisions::{ChangeId, CommitId, Revision},
 };
 
@@ -38,6 +39,7 @@ pub struct ChangeBufferSelectionEvent(pub RevisionSelection);
 #[derive(Clone, Component, Default)]
 pub struct ChangeBuffer {
     revisions: Vec<Revision>,
+    log_output: Vec<LogOutput>,
     selection: IndexSelection,
     pub viewport_y: usize,
 }
@@ -140,10 +142,13 @@ fn read_revisions(
 ) -> Result<()> {
     let mut change_buffer = change_buffer.get_single_mut()?;
 
-    for LogResponseEvent(revisions) in ev_log_response.read() {
-        if change_buffer.revisions.is_empty() {
+    for LogResponseEvent(log_output) in ev_log_response.read() {
+        let revisions = log_output.iter().filter_map(LogOutput::revision).collect();
+
+        if change_buffer.log_output.is_empty() {
             change_buffer.selection = IndexSelection::Single(0);
-            change_buffer.revisions = revisions.clone();
+            change_buffer.log_output = log_output.clone();
+            change_buffer.revisions = revisions;
             continue;
         }
 
@@ -156,7 +161,8 @@ fn read_revisions(
                     .unwrap_or(0);
 
                 change_buffer.selection = IndexSelection::Single(index);
-                change_buffer.revisions = revisions.clone();
+                change_buffer.log_output = log_output.clone();
+                change_buffer.revisions = revisions;
             }
 
             // Select the range of commits with the same start and end change_id if they exist
@@ -169,7 +175,9 @@ fn read_revisions(
                     .zip((revisions.iter()).position(|r| r.change_id.0 == *end_change_id.0))
                     .map(|(start, end)| IndexSelection::Range(start, end))
                     .unwrap_or(IndexSelection::Single(0));
-                change_buffer.revisions = revisions.clone();
+
+                change_buffer.log_output = log_output.clone();
+                change_buffer.revisions = revisions;
             }
         }
 
@@ -193,18 +201,47 @@ impl StatefulWidget for ChangeBuffer {
     type State = usize;
 
     fn render(self, area: Rect, buf: &mut Buffer, viewport_y: &mut Self::State) {
-        let selected_revs = match self.selection {
-            IndexSelection::Single(index) => index..=index,
-            IndexSelection::Range(start, end) => start..=end,
+        let map_index = |i: usize| {
+            if self.revisions.is_empty() {
+                return 0..=0;
+            }
+
+            let revision = &self.revisions[i];
+            let line_index = (self.log_output.iter())
+                .position(|l| {
+                    l.revision()
+                        .is_some_and(|r| r.change_id.0 == revision.change_id.0)
+                })
+                .ok_or_else(|| {
+                    anyhow!("Couldn't map revision to log line. This should never happen.")
+                })
+                .unwrap();
+
+            line_index..=line_index
         };
 
-        let lines = (self.revisions.iter().enumerate())
-            .flat_map(|(i, rev)| RevisionLine::vec_from(rev, selected_revs.contains(&i)))
-            .collect::<Vec<_>>();
+        let selected_lines = match self.selection {
+            IndexSelection::Single(index) => map_index(index),
+            IndexSelection::Range(start, end) => {
+                map_index(start).start().clone()..=map_index(end).end().clone()
+            }
+        };
+
+        let mut lines = vec![];
+        let mut last_selected_index = 0;
+
+        for (i, item) in self.log_output.iter().enumerate() {
+            let is_selected = selected_lines.contains(&i);
+            lines.append(&mut LogLine::vec_from(item, is_selected));
+
+            if is_selected {
+                last_selected_index = lines.len() - 1;
+            }
+        }
 
         let (computed_viewport_y, line_range) = viewport::compute_sliding_window(
             lines.len(),
-            2 * selected_revs.end(),
+            last_selected_index,
             *viewport_y,
             area.height as usize,
             area.height as usize / 4,
@@ -228,6 +265,44 @@ impl StatefulWidget for ChangeBuffer {
         }
 
         EmptyBuffer.render(empty, buf);
+    }
+}
+
+#[derive(Clone)]
+enum LogLine {
+    Revision(RevisionLine),
+    Decoration(DecorationLine),
+}
+
+impl LogLine {
+    fn vec_from(log_output: &LogOutput, is_selected: bool) -> Vec<Self> {
+        match log_output {
+            LogOutput::Decoration(text) => {
+                vec![Self::Decoration(DecorationLine {
+                    text: text.clone(),
+                    is_selected,
+                })]
+            }
+            LogOutput::Revision(revision) => RevisionLine::vec_from(&revision, is_selected)
+                .into_iter()
+                .map(|l| Self::Revision(l))
+                .collect(),
+        }
+    }
+}
+
+impl Widget for LogLine {
+    fn render(self, area: Rect, buf: &mut Buffer)
+    where
+        Self: Sized,
+    {
+        match self {
+            Self::Decoration(decoration) => decoration.render(area, buf),
+            Self::Revision(revision) => match revision {
+                RevisionLine::Top(top) => top.render(area, buf),
+                RevisionLine::Bottom(bottom) => bottom.render(area, buf),
+            },
+        }
     }
 }
 
@@ -258,18 +333,6 @@ impl RevisionLine {
                 is_selected,
             }),
         ]
-    }
-}
-
-impl Widget for RevisionLine {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
-        match self {
-            RevisionLine::Top(top) => top.render(area, buf),
-            RevisionLine::Bottom(bottom) => bottom.render(area, buf),
-        }
     }
 }
 
@@ -381,5 +444,26 @@ impl Widget for RevisionBottomLine {
         }
 
         bottom.render(area, buf);
+    }
+}
+
+#[derive(Clone)]
+struct DecorationLine {
+    text: String,
+    is_selected: bool,
+}
+
+impl Widget for DecorationLine {
+    fn render(self, area: Rect, buf: &mut Buffer)
+    where
+        Self: Sized,
+    {
+        if self.is_selected {
+            Block::default()
+                .style(Style::new().on_dark_gray())
+                .render(area, buf)
+        }
+
+        Span::styled(format!("  {}", self.text), Style::new().dim()).render(area, buf);
     }
 }
