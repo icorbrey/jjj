@@ -18,7 +18,11 @@ cargo install jjj
 
 ## ✳️ Features
 
-<sup>🌳 Mature feature &nbsp;&centerdot; 🌱 New feature &nbsp;&centerdot; 🔜 Coming soon</sup>
+<sup>
+  🌳 Mature feature &nbsp;&centerdot;&nbsp;
+  🌱 New feature    &nbsp;&centerdot;&nbsp;
+  🔜 Coming soon
+</sup>
 
 - 🌱 View the current output of `jj log`
 - 🌱 Auto-refresh the log to keep up with external changes
