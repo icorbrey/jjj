@@ -35,6 +35,7 @@ pub mod prelude {
     pub(super) use crate::screens::Screen;
 }
 
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");

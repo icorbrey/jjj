@@ -17,6 +17,7 @@ use crate::{app::AppSet, backend::config::Config};
 use super::Screen;
 
 /// Renders the splash screen when entering [`Screen::Splash`].
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");

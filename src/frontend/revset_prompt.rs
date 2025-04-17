@@ -10,6 +10,7 @@ use crate::backend::log::LogRevsetEvent;
 
 use super::prelude::*;
 
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");
@@ -111,5 +112,135 @@ impl Widget for &RevsetPrompt {
                     .padding(Padding::horizontal(1)),
             )
             .render(prompt_area, buf);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bevy::ecs::system::RunSystemOnce;
+    use crossterm::event::{KeyEventState, KeyModifiers};
+    use insta::assert_snapshot;
+    use ratatui::backend::TestBackend;
+
+    use crate::events;
+
+    use super::*;
+
+    fn to_keypresses(s: &str) -> Vec<KeyEvent> {
+        s.chars()
+            .map(|ch| {
+                KeyEvent(crossterm::event::KeyEvent {
+                    modifiers: KeyModifiers::NONE,
+                    state: KeyEventState::NONE,
+                    kind: KeyEventKind::Press,
+                    code: KeyCode::Char(ch),
+                })
+            })
+            .collect()
+    }
+
+    #[test]
+    fn read_keys() -> Result<()> {
+        let mut app = App::new();
+
+        app.add_plugins(events::plugin);
+        app.add_event::<KeyEvent>();
+
+        app.add_systems(Update, super::read_keys.pipe(errors::forward));
+
+        (app.world_mut()).run_system_once(
+            |mut commands: Commands, mut ev_keypress: EventWriter<KeyEvent>| {
+                commands.spawn(RevsetPrompt::default());
+                ev_keypress.send_batch(to_keypresses("r"));
+            },
+        )?;
+
+        app.update();
+
+        // Make sure nothing's input on the first frame
+        (app.world_mut()).run_system_once(
+            |prompt: Query<&RevsetPrompt>, mut ev_keypress: EventWriter<KeyEvent>| {
+                let prompt = prompt.single();
+
+                assert!(prompt.input.is_empty());
+                assert!(prompt.read_input);
+
+                ev_keypress.send_batch(to_keypresses("testa"));
+            },
+        )?;
+
+        app.update();
+
+        // Make sure text input works
+        (app.world_mut()).run_system_once(
+            |ev_log_revset: EventReader<LogRevsetEvent>,
+             mut ev_keypress: EventWriter<KeyEvent>,
+             prompt: Query<&RevsetPrompt>| {
+                let prompt = prompt.single();
+
+                assert_eq!(prompt.input, "testa".to_string());
+                assert!(ev_log_revset.is_empty());
+
+                ev_keypress.send(KeyEvent(crossterm::event::KeyEvent {
+                    modifiers: KeyModifiers::NONE,
+                    state: KeyEventState::NONE,
+                    kind: KeyEventKind::Press,
+                    code: KeyCode::Backspace,
+                }))
+            },
+        )?;
+
+        app.update();
+
+        // Make sure backspace works
+        (app.world_mut()).run_system_once(
+            |ev_log_revset: EventReader<LogRevsetEvent>,
+             mut ev_keypress: EventWriter<KeyEvent>,
+             prompt: Query<&RevsetPrompt>| {
+                let prompt = prompt.single();
+
+                assert_eq!(prompt.input, "test".to_string());
+                assert!(ev_log_revset.is_empty());
+
+                ev_keypress.send(KeyEvent(crossterm::event::KeyEvent {
+                    modifiers: KeyModifiers::NONE,
+                    state: KeyEventState::NONE,
+                    kind: KeyEventKind::Press,
+                    code: KeyCode::Enter,
+                }))
+            },
+        )?;
+
+        app.update();
+
+        // Make sure submitting with enter works
+        (app.world_mut()).run_system_once(
+            |mut ev_log_revset: EventReader<LogRevsetEvent>, prompt: Query<&RevsetPrompt>| {
+                let prompt = prompt.single();
+
+                assert_eq!(prompt.input, "test".to_string());
+
+                assert_eq!(ev_log_revset.len(), 1);
+                for ev in ev_log_revset.read() {
+                    assert_eq!(ev.0, "test".to_string());
+                }
+            },
+        )?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn snapshot_revset_prompt() {
+        let prompt = RevsetPrompt {
+            input: "this is a test".into(),
+            read_input: true,
+        };
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(&prompt, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
     }
 }

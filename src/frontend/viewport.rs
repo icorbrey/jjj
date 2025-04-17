@@ -18,12 +18,6 @@ pub fn compute_sliding_window(
         viewport_y
     };
 
-    tracing::trace!(
-        computed_y,
-        "{:?}",
-        computed_y..usize::min(item_length, computed_y + viewport_height),
-    );
-
     (
         computed_y,
         computed_y..usize::min(item_length, computed_y + viewport_height),

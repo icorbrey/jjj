@@ -8,6 +8,8 @@ use super::prelude::*;
 #[derive(Deref, Event)]
 pub struct NotificationEvent(pub Notification);
 
+#[mutants::skip]
+#[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");
 
@@ -126,5 +128,29 @@ impl Widget for &CommandLine {
 
             span.render(area, buf);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+    use ratatui::backend::TestBackend;
+
+    use super::*;
+
+    #[test]
+    fn snapshot_command_line() {
+        let command_line = CommandLine {
+            active_notification: Some(Notification {
+                message: "This is a test".into(),
+                angry: true,
+            }),
+        };
+
+        let mut terminal = Terminal::new(TestBackend::new(80, 20)).unwrap();
+        terminal
+            .draw(|frame| frame.render_widget(&command_line, frame.area()))
+            .unwrap();
+        assert_snapshot!(terminal.backend());
     }
 }

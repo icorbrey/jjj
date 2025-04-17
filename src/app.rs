@@ -7,6 +7,7 @@ use bevy_ratatui::RatatuiPlugins;
 
 use crate::{backend, events, frontend, screens};
 
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");

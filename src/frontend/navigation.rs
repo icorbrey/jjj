@@ -7,6 +7,7 @@ pub mod prelude {
     pub use super::{is_focused, Navigation};
 }
 
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 pub fn plugin(app: &mut App) {
     trace!("Initializing plugin...");
@@ -203,6 +204,7 @@ pub struct Breadcrumb(pub Entity);
 #[derive(Component)]
 pub struct Popup;
 
+#[mutants::skip]
 #[tracing::instrument(skip_all)]
 fn gc_popups(
     unfocused: Trigger<OnRemove, Focus>,
@@ -212,5 +214,97 @@ fn gc_popups(
     if let Ok(popup) = popups.get(unfocused.entity()) {
         commands.entity(popup).despawn_recursive();
         debug!("Despawned popup entity {:?}", popup);
+    }
+}
+#[cfg(test)]
+mod tests {
+    use bevy::ecs::system::RunSystemOnce;
+
+    use super::*;
+
+    #[test]
+    fn test_is_focused() -> Result<()> {
+        let mut app = App::new();
+        let entity = app.world_mut().spawn_empty().id();
+
+        (app.world_mut()).run_system_once(move |navigation: Navigation| {
+            assert!(!navigation.is_focused(entity));
+        })?;
+
+        app.world_mut().entity_mut(entity).insert(Focus);
+
+        (app.world_mut()).run_system_once(move |navigation: Navigation| {
+            assert!(navigation.is_focused(entity));
+        })?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_focus_as_root() -> Result<()> {
+        let mut app = App::new();
+        let entity = app.world_mut().spawn_empty().id();
+
+        (app.world_mut()).run_system_once(move |mut navigation: Navigation| {
+            navigation.focus_as_root(entity.clone());
+        })?;
+
+        (app.world_mut()).run_system_once(move |q: Query<(&Focus, &NavigationRoot)>| {
+            let _ = q.get(entity).unwrap();
+        })?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_focus() -> Result<()> {
+        let mut app = App::new();
+        let root = app.world_mut().spawn(NavigationRoot).id();
+        let entity = app.world_mut().spawn_empty().id();
+
+        (app.world_mut()).run_system_once(move |mut navigation: Navigation| {
+            navigation.focus(entity).unwrap();
+        })?;
+
+        (app.world_mut()).run_system_once(move |q: Query<&Breadcrumb, With<Focus>>| {
+            let breadcrumb = q.get(entity).unwrap();
+            assert_eq!(breadcrumb.0, root)
+        })?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_go_to() -> Result<()> {
+        let mut app = App::new();
+        let current = app.world_mut().spawn(Focus).id();
+        let target = app.world_mut().spawn_empty().id();
+
+        (app.world_mut()).run_system_once(move |mut navigation: Navigation| {
+            navigation.go_to(target).unwrap();
+        })?;
+
+        assert!(!app.world_mut().entity(current).contains::<Focus>());
+        assert!(app.world_mut().entity(current).contains::<Breadcrumb>());
+        assert!(app.world_mut().entity(target).contains::<Focus>());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_go_back() -> Result<()> {
+        let mut app = App::new();
+        let previous = app.world_mut().spawn_empty().id();
+        let current = app.world_mut().spawn((Focus, Breadcrumb(previous))).id();
+
+        (app.world_mut()).run_system_once(|mut navigation: Navigation| {
+            navigation.go_back().unwrap();
+        })?;
+
+        assert!(!app.world_mut().entity(current).contains::<Focus>());
+        assert!(!app.world_mut().entity(current).contains::<Breadcrumb>());
+        assert!(app.world_mut().entity(previous).contains::<Focus>());
+
+        Ok(())
     }
 }
