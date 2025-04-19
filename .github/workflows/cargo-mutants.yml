@@ -8,6 +8,10 @@ on:
 jobs:
   cargo_mutants:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: write
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
