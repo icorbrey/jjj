@@ -1,4 +1,4 @@
-name: Cargo Mutants Cron
+name: Mutant Report™
 
 on:
   schedule:
@@ -17,8 +17,8 @@ jobs:
 
       - name: Run cargo-mutants
         run: |
-          # Store output in mutants.out/, don't fail the entire job if missed mutants exist.
-          cargo mutants --output-dir mutants.out || true
+          # Don't fail the entire job if missed mutants exist.
+          cargo mutants || true
 
       - name: Generate markdown report
         id: gen_report
