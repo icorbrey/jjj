@@ -1,0 +1,105 @@
+src/screens/splash.rs:93:5: replace center -> Rect with Default::default()
+src/frontend/viewport.rs:16:19: replace + with - in compute_sliding_window
+src/frontend/viewport.rs:13:25: replace < with > in compute_sliding_window
+src/frontend/change_buffer.rs:241:51: replace - with / in <impl StatefulWidget for ChangeBuffer>::render
+src/frontend/viewport.rs:15:44: replace - with / in compute_sliding_window
+src/screens/splash.rs:122:9: replace SplashCursor::advance with ()
+src/logger.rs:75:9: replace <impl Write for InMemoryWriter>::write -> io::Result<usize> with Ok(1)
+src/screens/splash.rs:163:9: replace SplashLineTimer::init with ()
+src/frontend/space_menu.rs:66:57: replace + with - in <impl Widget for &SpaceMenu>::render
+src/frontend/revset_prompt.rs:41:5: replace read_keys -> Result<()> with Ok(())
+src/frontend/change_buffer.rs:178:72: replace == with != in read_revisions
+src/frontend/status_line.rs:62:9: replace <impl Widget for &StatusLine>::render with ()
+src/frontend/viewport.rs:15:66: replace < with > in compute_sliding_window
+src/main.rs:18:5: replace main with ()
+src/frontend/viewport.rs:29:56: replace + with - in compute_sliding_window
+src/frontend/change_buffer.rs:103:64: replace + with - in read_keys
+src/logger.rs:55:5: replace dump with ()
+src/frontend/viewport.rs:15:62: replace - with / in compute_sliding_window
+src/frontend/space_menu.rs:66:57: replace + with * in <impl Widget for &SpaceMenu>::render
+src/frontend/change_buffer.rs:250:34: replace / with * in <impl StatefulWidget for ChangeBuffer>::render
+src/frontend/change_buffer.rs:75:38: replace == with != in read_keys
+src/frontend/viewport.rs:15:44: replace - with + in compute_sliding_window
+src/screens/splash.rs:174:9: replace SplashLineTimer::advance_cursor with ()
+src/frontend/navigation.rs:138:9: replace Navigation<'_, '_>::reset_stack with ()
+src/screens/mod.rs:27:23: delete ! in init_state
+src/frontend/change_buffer.rs:80:26: replace != with == in read_keys
+src/screens/splash.rs:170:9: replace SplashLineTimer::tick with ()
+src/frontend/change_buffer.rs:177:49: replace == with != in read_revisions
+src/screens/splash.rs:153:9: replace SplashTimer::remove with ()
+src/frontend/change_buffer.rs:216:56: replace == with != in <impl StatefulWidget for ChangeBuffer>::render
+src/utils.rs:21:9: replace <impl AppExt for App>::register_scoped_type with ()
+src/frontend/change_buffer.rs:144:5: replace read_revisions -> Result<()> with Ok(())
+src/screens/splash.rs:122:36: replace + with * in SplashCursor::advance
+src/screens/splash.rs:105:5: replace skip_to_interface with ()
+src/screens/splash.rs:126:9: replace SplashCursor::remove with ()
+src/frontend/change_buffer.rs:115:66: replace + with - in read_keys
+src/screens/splash.rs:147:9: replace SplashTimer::continue_to_interface with ()
+src/frontend/viewport.rs:16:55: replace + with * in compute_sliding_window
+src/frontend/viewport.rs:15:62: replace - with + in compute_sliding_window
+src/screens/splash.rs:118:9: replace SplashCursor::init with ()
+src/frontend/navigation.rs:185:5: replace is_focused -> bool with true
+src/frontend/viewport.rs:11:37: replace < with > in compute_sliding_window
+src/frontend/status_line.rs:35:5: replace monitor_logged_revset with ()
+src/frontend/space_menu.rs:30:5: replace read_keys -> Result<()> with Ok(())
+src/frontend/viewport.rs:15:26: replace + with * in compute_sliding_window
+src/frontend/change_buffer.rs:241:51: replace - with + in <impl StatefulWidget for ChangeBuffer>::render
+src/frontend/change_buffer.rs:250:34: replace / with % in <impl StatefulWidget for ChangeBuffer>::render
+src/frontend/space_menu.rs:31:26: replace != with == in read_keys
+src/frontend/change_buffer.rs:73:5: replace read_keys -> Result<()> with Ok(())
+src/frontend/change_buffer.rs:115:66: replace + with * in read_keys
+src/frontend/navigation.rs:48:9: replace Navigation<'_, '_>::spawn_popup -> Result<()> with Ok(())
+src/frontend/change_buffer.rs:207:9: replace <impl StatefulWidget for ChangeBuffer>::render with ()
+src/screens/splash.rs:75:5: replace draw -> Result<()> with Ok(())
+src/frontend/change_buffer.rs:320:9: replace RevisionLine::vec_from -> Vec<Self> with vec![]
+src/frontend/navigation.rs:185:5: delete ! in is_focused
+src/frontend/viewport.rs:13:38: replace + with * in compute_sliding_window
+src/frontend/change_buffer.rs:96:58: replace + with - in read_keys
+src/frontend/change_buffer.rs:96:58: replace + with * in read_keys
+src/frontend/command_line.rs:73:9: replace NotificationTimeoutTimer::dismiss_notification -> Result<()> with Ok(())
+src/frontend/command_line.rs:46:5: replace listen_for_notifications -> Result<()> with Ok(())
+src/frontend/change_buffer.rs:102:22: replace != with == in read_keys
+src/screens/mod.rs:27:5: replace init_state with ()
+src/frontend/space_menu.rs:50:9: replace <impl Widget for &SpaceMenu>::render with ()
+src/utils.rs:31:5: replace init_resource with ()
+src/backend/mod.rs:72:9: replace <impl JujutsuShell for RealJujutsuShell>::execute -> Result<String> with Ok(String::new())
+src/frontend/change_buffer.rs:302:9: replace <impl Widget for LogLine>::render with ()
+src/frontend/error_popup.rs:94:37: replace + with - in <impl Widget for &ErrorPopup>::render
+src/screens/splash.rs:122:36: replace + with - in SplashCursor::advance
+src/logger.rs:39:5: replace install with ()
+src/frontend/revset_prompt.rs:45:8: delete ! in read_keys
+src/frontend/change_buffer.rs:102:28: replace + with * in read_keys
+src/frontend/viewport.rs:16:19: replace + with * in compute_sliding_window
+src/frontend/viewport.rs:11:37: replace < with == in compute_sliding_window
+src/frontend/change_buffer.rs:163:49: replace == with != in read_revisions
+src/frontend/viewport.rs:15:26: replace + with - in compute_sliding_window
+src/frontend/viewport.rs:16:55: replace + with - in compute_sliding_window
+src/frontend/status_line.rs:48:5: replace monitor_selected_revset with ()
+src/frontend/change_buffer.rs:103:64: replace + with * in read_keys
+src/cli.rs:10:5: replace version -> String with String::new()
+src/frontend/command_line.rs:65:9: replace NotificationTimeoutTimer::tick with ()
+src/cli.rs:10:5: replace version -> String with "xyzzy".into()
+src/frontend/viewport.rs:16:37: replace - with + in compute_sliding_window
+src/frontend/viewport.rs:29:56: replace + with * in compute_sliding_window
+src/screens/interface.rs:57:5: replace draw -> Result<()> with Ok(())
+src/frontend/viewport.rs:13:38: replace + with - in compute_sliding_window
+src/utils.rs:38:5: replace remove_resource with ()
+src/frontend/viewport.rs:13:25: replace < with == in compute_sliding_window
+src/screens/splash.rs:180:9: replace SplashLineTimer::remove with ()
+src/frontend/change_buffer.rs:102:28: replace + with - in read_keys
+src/logger.rs:75:9: replace <impl Write for InMemoryWriter>::write -> io::Result<usize> with Ok(0)
+src/frontend/viewport.rs:16:37: replace - with / in compute_sliding_window
+src/screens/splash.rs:143:9: replace SplashTimer::tick with ()
+src/frontend/error_popup.rs:42:5: replace listen with ()
+src/frontend/viewport.rs:15:66: replace < with == in compute_sliding_window
+src/frontend/revset_prompt.rs:86:9: replace <impl Widget for &RevsetPrompt>::render with ()
+src/frontend/change_buffer.rs:282:9: replace LogLine::vec_from -> Vec<Self> with vec![]
+src/frontend/change_buffer.rs:109:60: replace + with * in read_keys
+src/frontend/revset_prompt.rs:53:26: replace != with == in read_keys
+src/frontend/error_popup.rs:94:69: replace / with * in <impl Widget for &ErrorPopup>::render
+src/frontend/error_popup.rs:61:5: replace read_keys with ()
+src/frontend/change_buffer.rs:109:60: replace + with - in read_keys
+src/backend/mod.rs:72:9: replace <impl JujutsuShell for RealJujutsuShell>::execute -> Result<String> with Ok("xyzzy".into())
+src/frontend/navigation.rs:185:5: replace is_focused -> bool with false
+src/screens/interface.rs:37:5: replace init with ()
+src/screens/splash.rs:136:9: replace SplashTimer::init with ()
