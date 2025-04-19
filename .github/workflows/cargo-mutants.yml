@@ -1,4 +1,4 @@
-name: Mutant Report™
+name: The Mutant Report™
 
 on:
   schedule:
@@ -38,8 +38,7 @@ jobs:
             $(grep -v '^[[:space:]]*$' mutants.out/unviable.txt 2>/dev/null | wc -l) \
           ))
 
-          REPORT="$X uncaught mutants found (out of $Y total mutants).\n\n"
-          REPORT+="Missed mutants for commit \`${HEAD_SHA}\`:\n\n"
+          REPORT=$'$X uncaught mutants found (out of $Y total mutants) in commit https://github.com/icorbrey/jjj/blob/${HEAD_SHA}.\n\n'
 
           if [ "$X" -gt "0" ]; then
             DETAILS=$(cat mutants.out/missed.txt 2>/dev/null \
@@ -52,7 +51,11 @@ jobs:
                     file = $1
                     line = $2
                     column = $3
+
                     mutation = $4
+                    for (i = 5; i <= NF; i++) {
+                      mutation = mutation ":" $i
+                    }
                     sub(/^ +/, "", mutation)
 
                     if (file != current_file) {
@@ -63,7 +66,7 @@ jobs:
                       print "## `" file "`\n"
                     }
 
-                    print "- [Line " line ", column " column ": " mutation "](https://github.com/icorbrey/jjj/blob/" HEAD "/" file "#L" line ")"
+                    print "- [Line " line ", column " column "](https://github.com/icorbrey/jjj/blob/" HEAD "/" file "#L" line "): `" mutation "`"
                   }
               ')
             REPORT+="$DETAILS"
@@ -120,7 +123,7 @@ jobs:
                 await github.graphql(
                   `
                   mutation($repositoryId: ID!, $issueId: ID!) {
-                    unpinIssue(input: { repositoryId: $repositoryId, issueId: $issueId }) {
+                    unpinIssue(input: { issueId: $issueId }) {
                       issue {
                         id
                       }
@@ -128,7 +131,6 @@ jobs:
                   }
                   `,
                   {
-                    repositoryId,
                     issueId: issueNodeId
                   }
                 );
@@ -162,7 +164,7 @@ jobs:
 
             // 2) Build a custom title
             const count = ${{ steps.gen_report.outputs.uncaught_count }};
-            const issueTitle = `Mutant Report™: ${count} mutants found.`;
+            const issueTitle = `The Mutant Report™: ${count} mutants running amok.`;
 
             // 3) Create the new issue with the "mutants" label
             const newIssue = await github.rest.issues.create({
@@ -198,7 +200,7 @@ jobs:
             await github.graphql(
               `
               mutation($repositoryId: ID!, $issueId: ID!) {
-                pinIssue(input: { repositoryId: $repositoryId, issueId: $issueId }) {
+                pinIssue(input: { issueId: $issueId }) {
                   issue {
                     id
                   }
@@ -206,7 +208,6 @@ jobs:
               }
               `,
               {
-                repositoryId,
                 issueId: newIssueNodeId
               }
             );
