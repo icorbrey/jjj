@@ -122,7 +122,7 @@ jobs:
               try {
                 await github.graphql(
                   `
-                  mutation($repositoryId: ID!, $issueId: ID!) {
+                  mutation($issueId: ID!) {
                     unpinIssue(input: { issueId: $issueId }) {
                       issue {
                         id
@@ -199,7 +199,7 @@ jobs:
             // Pin it
             await github.graphql(
               `
-              mutation($repositoryId: ID!, $issueId: ID!) {
+              mutation($issueId: ID!) {
                 pinIssue(input: { issueId: $issueId }) {
                   issue {
                     id
