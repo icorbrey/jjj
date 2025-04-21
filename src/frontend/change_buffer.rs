@@ -8,11 +8,12 @@ use ratatui::{
 };
 
 use crate::backend::{
-    log::{LogOutput, LogResponseEvent},
+    log::{LogOutput, LogResponseEvent, RefreshLogEvent},
     revisions::{ChangeId, CommitId, Revision},
+    JujutsuCli,
 };
 
-use super::prelude::*;
+use super::{command_line::NotificationEvent, prelude::*};
 
 #[mutants::skip]
 #[tracing::instrument(skip_all)]
@@ -66,10 +67,13 @@ pub enum RevisionSelection {
 
 fn read_keys(
     mut ev_selection: EventWriter<ChangeBufferSelectionEvent>,
+    mut ev_notification: EventWriter<NotificationEvent>,
+    mut ev_refresh_log: EventWriter<RefreshLogEvent>,
     mut change_buffer: Query<&mut ChangeBuffer>,
     mut ev_keypresses: EventReader<KeyEvent>,
     mut exit: EventWriter<AppExit>,
     mut navigation: Navigation,
+    jj_cli: Res<JujutsuCli>,
 ) -> Result<()> {
     let mut change_buffer = change_buffer.get_single_mut()?;
 
@@ -84,57 +88,94 @@ fn read_keys(
 
         let max = change_buffer.revisions.len().saturating_sub(1);
 
-        let selection = match (change_buffer.selection.clone(), keypress.code) {
+        let mut selection = None;
+
+        match (change_buffer.selection.clone(), keypress.code) {
             (_, KeyCode::Char(' ')) => {
                 navigation.spawn_popup(SpaceMenu)?;
-                return Ok(());
             }
             (_, KeyCode::Char('q')) => {
                 exit.send_default();
-                return Ok(());
+            }
+            (IndexSelection::Single(i), KeyCode::Char('a')) => {
+                let change_id = change_buffer.revisions[i].change_id.clone();
+                jj_cli.abandon(change_id.clone())?;
+                ev_refresh_log.send_default();
+                ev_notification.send(NotificationEvent::new(format!("Abandoned {change_id}")));
+            }
+            (_, KeyCode::Char('u')) => {
+                jj_cli.undo()?;
+                ev_refresh_log.send_default();
+                ev_notification.send(NotificationEvent::new("Undo complete".into()));
+            }
+            (IndexSelection::Single(i), KeyCode::Char('n')) => {
+                let change_id = change_buffer.revisions[i].change_id.clone();
+                jj_cli.new(change_id.clone())?;
+                selection = Some(IndexSelection::Single(0));
+                ev_refresh_log.send_default();
+                ev_notification.send(NotificationEvent::new(format!(
+                    "Created new commit on {change_id}"
+                )));
+            }
+            (IndexSelection::Single(i), KeyCode::Char('s')) => {
+                let change_id = change_buffer.revisions[i].change_id.clone();
+                jj_cli.squash(change_id.clone())?;
+                ev_refresh_log.send_default();
+                ev_notification.send(NotificationEvent::new(format!("Squashed {change_id}")));
+            }
+            (IndexSelection::Single(i), KeyCode::Enter) => {
+                let change_id = change_buffer.revisions[i].change_id.clone();
+                jj_cli.edit(change_id.clone())?;
+                ev_refresh_log.send_default();
+                ev_notification.send(NotificationEvent::new(format!("Editing {change_id}")));
             }
             (IndexSelection::Single(i), KeyCode::Char('j')) => {
-                Some(IndexSelection::Single(usize::min(i + 1, max)))
+                selection = Some(IndexSelection::Single(usize::min(i + 1, max)));
             }
             (IndexSelection::Single(i), KeyCode::Char('k')) => {
-                Some(IndexSelection::Single(i.saturating_sub(1)))
+                selection = Some(IndexSelection::Single(i.saturating_sub(1)));
             }
             (IndexSelection::Single(i), KeyCode::Char('x')) => {
-                if i != (i + 1).clamp(0, max) {
+                selection = if i != (i + 1).clamp(0, max) {
                     Some(IndexSelection::Range(i, usize::min(i + 1, max)))
                 } else {
                     Some(IndexSelection::Single(i))
-                }
+                };
             }
             (IndexSelection::Range(_, end), KeyCode::Char('j')) => {
-                Some(IndexSelection::Single(usize::min(end + 1, max)))
+                selection = Some(IndexSelection::Single(usize::min(end + 1, max)));
             }
             (IndexSelection::Range(start, _), KeyCode::Char('k')) => {
-                Some(IndexSelection::Single(start.saturating_sub(1)))
+                selection = Some(IndexSelection::Single(start.saturating_sub(1)));
             }
             (IndexSelection::Range(start, end), KeyCode::Char('x')) => {
-                Some(IndexSelection::Range(start, usize::min(end + 1, max)))
+                selection = Some(IndexSelection::Range(start, usize::min(end + 1, max)));
             }
-            _ => None,
-        };
+            _ => {}
+        }
 
         if let Some(selection) = selection {
             change_buffer.selection = selection.clone();
-            ev_selection.send(match selection {
-                IndexSelection::Single(i) => ChangeBufferSelectionEvent(RevisionSelection::Single(
-                    change_buffer.revisions[i].clone(),
-                )),
-                IndexSelection::Range(start, end) => {
-                    ChangeBufferSelectionEvent(RevisionSelection::Range(
-                        change_buffer.revisions[start].clone(),
-                        change_buffer.revisions[end].clone(),
-                    ))
-                }
-            });
+            let revisions = change_buffer.revisions.clone();
+            ev_selection.send(ChangeBufferSelectionEvent(get_revision_selection(
+                revisions, selection,
+            )));
         }
     }
 
     Ok(())
+}
+
+fn get_revision_selection(
+    revisions: Vec<Revision>,
+    selection: IndexSelection,
+) -> RevisionSelection {
+    match selection {
+        IndexSelection::Single(i) => RevisionSelection::Single(revisions[i].clone()),
+        IndexSelection::Range(start, end) => {
+            RevisionSelection::Range(revisions[start].clone(), revisions[end].clone())
+        }
+    }
 }
 
 fn read_revisions(

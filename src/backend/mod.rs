@@ -4,6 +4,7 @@ use std::{fmt::Display, process::Command};
 
 use anyhow::{anyhow, Result};
 use bevy::prelude::*;
+use revisions::ChangeId;
 
 pub mod config;
 pub mod log;
@@ -23,6 +24,18 @@ pub fn plugin(app: &mut App) {
 pub struct JujutsuCli(Box<dyn JujutsuShell + Send + Sync>);
 
 impl JujutsuCli {
+    pub fn abandon(&self, change_id: ChangeId) -> Result<()> {
+        self.execute(vec!["abandon", change_id.0.as_str()])
+            .map_err(|_| anyhow!("Couldn't abandon commit `{change_id}`"))?;
+        Ok(())
+    }
+
+    pub fn edit(&self, change_id: ChangeId) -> Result<()> {
+        self.execute(vec!["edit", change_id.0.as_str()])
+            .map_err(|_| anyhow!("Couldn't select commit `{change_id}`"))?;
+        Ok(())
+    }
+
     pub fn list_config(&self) -> Result<String> {
         self.execute(vec!["config", "list"])
             .map_err(|e| anyhow!("Failed to read config: {e}"))
@@ -35,6 +48,24 @@ impl JujutsuCli {
     ) -> Result<String> {
         self.execute(vec!["log", "-r", revset.as_ref(), "-T", template.as_ref()])
             .map_err(|_| anyhow!("Couldn't read log for revset `{revset}`"))
+    }
+
+    pub fn new(&self, change_id: ChangeId) -> Result<()> {
+        self.execute(vec!["new", change_id.0.as_str()])
+            .map_err(|_| anyhow!("Couldn't create new commit after `{change_id}`"))?;
+        Ok(())
+    }
+
+    pub fn undo(&self) -> Result<()> {
+        self.execute(vec!["undo"])
+            .map_err(|_| anyhow!("Couldn't undo"))?;
+        Ok(())
+    }
+
+    pub fn squash(&self, change_id: ChangeId) -> Result<()> {
+        self.execute(vec!["squash", "-r", change_id.0.as_str()])
+            .map_err(|_| anyhow!("Couldn't squash commit `{change_id}`"))?;
+        Ok(())
     }
 
     #[cfg(test)]
@@ -65,9 +96,14 @@ impl JujutsuShell for RealJujutsuShell {
         _args.append(&mut args.clone());
         trace!("jj {}", _args.join(" "));
 
-        let output = String::from_utf8(Command::new("jj").args(_args).output()?.stdout)?;
-        trace!(output);
-        Ok(output)
+        let output = Command::new("jj").args(_args).output()?;
+        trace!("{:?}", output);
+
+        if output.status.success() {
+            Ok(String::from_utf8(output.stdout)?)
+        } else {
+            Err(anyhow!("{}", String::from_utf8(output.stderr)?))
+        }
     }
 }
 

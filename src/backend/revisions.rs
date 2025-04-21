@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 use bevy::prelude::*;
 
@@ -24,6 +24,12 @@ impl ChangeId {
     pub fn into_parts(&self) -> Parts<&str> {
         let (head, tail) = self.0.split_at(self.1);
         Parts { head, tail }
+    }
+}
+
+impl Display for ChangeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
