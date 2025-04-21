@@ -54,7 +54,8 @@ impl FromWorld for Config {
 
 impl Config {
     #[mutants::skip]
-    pub fn default() -> Self {
+    #[allow(clippy::new_without_default)] // Default conflicts with FromWorld
+    pub fn new() -> Self {
         default_table()
     }
 }
@@ -136,14 +137,12 @@ mod tests {
             Some(&Config {
                 log: LogConfig {
                     poll_interval_ms: 123,
-                    ..default_table()
                 },
                 splash: SplashConfig {
                     skip: true,
                     total_duration_ms: 4567,
                     ..default_table()
                 },
-                ..default_table()
             })
         );
     }

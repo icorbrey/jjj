@@ -3,17 +3,12 @@
 //! ## Usage
 //!
 //! ```rust
-//! use crate::logger;
+//! logger::install();
 //!
-//! fn main() {
-//!     logger::install();
-//!
-//!     // Your application code here
-//!     info!("This is an info message");
-//!     debug!("This is a debug message");
-//!     warn!("This is a warning message");
-//!
-//!     logger::dump();
+//! // Your application code here
+//! info!("This is an info message");
+//! debug!("This is a debug message");
+//! warn!("This is a warning message");
 //! }
 //! ```
 

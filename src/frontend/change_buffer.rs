@@ -57,6 +57,7 @@ impl Default for IndexSelection {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 pub enum RevisionSelection {
     Single(Revision),
@@ -72,7 +73,7 @@ fn read_keys(
 ) -> Result<()> {
     let mut change_buffer = change_buffer.get_single_mut()?;
 
-    if change_buffer.revisions.len() == 0 {
+    if change_buffer.revisions.is_empty() {
         return Ok(());
     }
 
@@ -225,9 +226,7 @@ impl StatefulWidget for ChangeBuffer {
 
         let selected_lines = match self.selection {
             IndexSelection::Single(index) => map_index(index),
-            IndexSelection::Range(start, end) => {
-                map_index(start).start().clone()..=map_index(end).end().clone()
-            }
+            IndexSelection::Range(start, end) => *map_index(start).start()..=*map_index(end).end(),
         };
 
         let mut lines = vec![];
@@ -286,9 +285,9 @@ impl LogLine {
                     is_selected,
                 })]
             }
-            LogOutput::Revision(revision) => RevisionLine::vec_from(&revision, is_selected)
+            LogOutput::Revision(revision) => RevisionLine::vec_from(revision, is_selected)
                 .into_iter()
-                .map(|l| Self::Revision(l))
+                .map(Self::Revision)
                 .collect(),
         }
     }
