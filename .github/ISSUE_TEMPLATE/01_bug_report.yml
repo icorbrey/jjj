@@ -49,7 +49,8 @@ body:
       label: Application Version
       description: What version did this bug occur in?
       options:
-        - 0.2.0 (Latest release)
+        - 0.2.1 (Latest release)
+        - 0.2.0
         - 0.1.0
         - Unreleased
     validations:
