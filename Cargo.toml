@@ -3,6 +3,7 @@ name = "jjj"
 version = "0.2.1"
 authors = ["Isaac Corbrey <icorbrey@gmail.com>"]
 description = "A modal interface for Jujutsu."
+readme = "CARGO.md"
 edition = "2021"
 homepage = "https://jjj.isaaccorbrey.com"
 repository = "https://github.com/icorbrey/jjj"
