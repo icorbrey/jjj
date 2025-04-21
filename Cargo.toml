@@ -1,6 +1,6 @@
 [package]
 name = "jjj"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Isaac Corbrey <icorbrey@gmail.com>"]
 description = "A modal interface for Jujutsu."
 edition = "2021"
@@ -15,10 +15,10 @@ anyhow = "1.0.97"
 bevy_ratatui = "0.7.1"
 chrono = "0.4.40"
 clap = { version = "4.5.35", features = [
-    "cargo",
-    "derive",
-    "string",
-    "wrap_help",
+	"cargo",
+	"derive",
+	"string",
+	"wrap_help",
 ] }
 crossterm = "0.28.1"
 lazy_static = "1.5.0"
