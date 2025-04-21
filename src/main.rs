@@ -1,5 +1,3 @@
-#![feature(panic_update_hook)]
-
 pub mod app;
 pub mod backend;
 pub mod cli;

@@ -44,10 +44,11 @@ pub fn install() {
 
     subscriber.init();
 
-    panic::update_hook(move |prev, info| {
+    let prev = panic::take_hook();
+    panic::set_hook(Box::new(move |info| {
         dump();
         prev(info);
-    });
+    }));
 }
 
 /// Dumps logged messages to the standard output.
