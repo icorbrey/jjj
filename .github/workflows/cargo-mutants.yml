@@ -38,11 +38,12 @@ jobs:
             $(grep -v '^[[:space:]]*$' mutants.out/unviable.txt 2>/dev/null | wc -l) \
           ))
 
-          REPORT=$'$X uncaught mutants found (out of $Y total mutants) in commit https://github.com/icorbrey/jjj/blob/${HEAD_SHA}.\n\n'
+          REPORT="$X uncaught mutants found (out of $Y total mutants) in commit https://github.com/icorbrey/jjj/blob/${HEAD_SHA}."
+          REPORT+=$'\n\n'
 
           if [ "$X" -gt "0" ]; then
             DETAILS=$(cat mutants.out/missed.txt 2>/dev/null \
-              | sort -t: -k1,1 \
+              | sort -t: -k1,1 -k2,2n -k3,3n \
               | awk -v HEAD="$HEAD_SHA" -F: '
                   BEGIN {
                     current_file = ""
