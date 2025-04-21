@@ -55,9 +55,8 @@ impl PollTimer {
     }
 
     fn debounce(mut poll_timer: ResMut<Self>, mut ev_log_response: EventReader<LogResponseEvent>) {
-        for _ in ev_log_response.read() {
+        if ev_log_response.read().next().is_some() {
             poll_timer.reset();
-            break;
         }
     }
 }
@@ -77,7 +76,7 @@ mod tests {
             log: LogConfig {
                 poll_interval_ms: 50,
             },
-            ..Config::default()
+            ..Config::new()
         });
 
         app.init_resource::<Time>();

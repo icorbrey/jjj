@@ -22,7 +22,7 @@ pub fn plugin(app: &mut App) {
 ///
 /// ```rust
 /// pub fn navigate(mut navigation: Navigation, state: Res<State>) {
-/// 	...
+///     ...
 /// }
 /// ```
 #[derive(SystemParam)]
@@ -176,7 +176,7 @@ impl Navigation<'_, '_> {
 /// pub struct SpaceMenu;
 ///
 /// pub fn plugin(app: &mut App) {
-/// 	app.add_systems(Update, read_keys.run_if(is_focused::<SpaceMenu>));
+///     app.add_systems(Update, read_keys.run_if(is_focused::<SpaceMenu>));
 /// }
 ///
 /// fn read_keys(ev_keypress: EventReader<KeyEvent>) { ... }
@@ -246,7 +246,7 @@ mod tests {
         let entity = app.world_mut().spawn_empty().id();
 
         (app.world_mut()).run_system_once(move |mut navigation: Navigation| {
-            navigation.focus_as_root(entity.clone());
+            navigation.focus_as_root(entity);
         })?;
 
         (app.world_mut()).run_system_once(move |q: Query<(&Focus, &NavigationRoot)>| {
