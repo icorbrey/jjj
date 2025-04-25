@@ -14,3 +14,7 @@ Cargo.lock
 *.pdb
 
 mutants.out*/
+
+# Nix and Nix-adjacent
+/result
+.direnv/
