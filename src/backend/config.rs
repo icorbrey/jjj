@@ -1,6 +1,10 @@
+use std::{collections::HashMap, ops::Deref};
+
 use anyhow::anyhow;
 use bevy::prelude::*;
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{de::DeserializeOwned, Deserialize, Deserializer};
+
+use crate::commands::{Command, StaticCommand};
 
 use super::JujutsuCli;
 
@@ -25,7 +29,7 @@ fn default_table<De: DeserializeOwned>() -> De {
 }
 
 /// Application configuration.
-#[derive(Debug, Deserialize, PartialEq, Eq, Reflect, Resource)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Resource)]
 pub struct Config {
     /// Logging configuration.
     #[serde(default = "default_table")]
@@ -34,6 +38,10 @@ pub struct Config {
     /// Splash screen configuration.
     #[serde(default = "default_table")]
     pub splash: SplashConfig,
+
+    /// Key bindings
+    #[serde(default = "default_table")]
+    pub keys: KeysConfig,
 }
 
 impl FromWorld for Config {
@@ -61,7 +69,7 @@ impl Config {
 }
 
 /// Configuration for logging.
-#[derive(Debug, Deserialize, PartialEq, Eq, Reflect)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct LogConfig {
     /// How frequently jjj should check the status of the current repo.
     #[serde(default = "LogConfig::default_poll_interval_ms")]
@@ -76,7 +84,7 @@ impl LogConfig {
 }
 
 /// Configuration for the splash screen.
-#[derive(Debug, Deserialize, PartialEq, Eq, Reflect)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct SplashConfig {
     /// Whether to skip the splash screen on startup.
     #[serde(default)]
@@ -100,6 +108,90 @@ impl SplashConfig {
     #[mutants::skip]
     fn default_line_interval_ms() -> u64 {
         150
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+pub struct KeysConfig {
+    #[serde(deserialize_with = "KeysConfig::change_keymap")]
+    #[serde(default = "default_change_keymap")]
+    pub change: KeyMap,
+    #[serde(deserialize_with = "KeysConfig::command_keymap")]
+    #[serde(default = "default_command_keymap")]
+    pub command: KeyMap,
+}
+
+const DEFAULT_CHANGE_KEYMAP: &str = r#"
+j = "move_visual_line_down"
+k = "move_visual_line_up"
+x = "extend_line_up"
+"#;
+
+fn default_change_keymap() -> KeyMap {
+    toml::de::from_str(DEFAULT_CHANGE_KEYMAP).unwrap()
+}
+
+// TODO: default command binding?
+// TODO: use raw string literal when the becomes nonempty.
+const DEFAULT_COMMAND_KEYMAP: &str = "";
+
+fn default_command_keymap() -> KeyMap {
+    toml::de::from_str(DEFAULT_COMMAND_KEYMAP).unwrap()
+}
+
+impl KeysConfig {
+    fn change_keymap<'de, D>(deserializer: D) -> Result<KeyMap, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let final_keymap =
+            KeyMap::merge(default_change_keymap(), KeyMap::deserialize(deserializer)?);
+
+        Ok(final_keymap)
+    }
+
+    fn command_keymap<'de, D>(deserializer: D) -> Result<KeyMap, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let final_keymap =
+            KeyMap::merge(default_command_keymap(), KeyMap::deserialize(deserializer)?);
+
+        Ok(final_keymap)
+    }
+}
+
+impl KeyMap {
+    fn merge(lhs: KeyMap, rhs: KeyMap) -> KeyMap {
+        let mut final_keymap = lhs;
+
+        final_keymap.0.extend(rhs.0);
+
+        final_keymap
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
+pub struct KeyMap(HashMap<char, KeyDefinition>);
+
+impl Deref for KeyMap {
+    type Target = HashMap<char, KeyDefinition>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum KeyDefinition {
+    Command(Command),
+    // TODO: minor mode
+}
+
+impl From<StaticCommand> for KeyDefinition {
+    fn from(static_command: StaticCommand) -> Self {
+        KeyDefinition::Command(Command::Static(static_command))
     }
 }
 
@@ -127,6 +219,9 @@ mod tests {
                 jjj.log.poll_interval_ms = 123
                 jjj.splash.skip = true
                 jjj.splash.total_duration_ms = 4567
+                jjj.keys.change.h = "move_visual_line_down"
+                jjj.keys.change.t = "move_visual_line_up"
+                jjj.keys.change.x = "move_visual_line_up"
             "#
             .into())
         }));
@@ -143,6 +238,19 @@ mod tests {
                     total_duration_ms: 4567,
                     ..default_table()
                 },
+                keys: KeysConfig {
+                    change: KeyMap(HashMap::from_iter([
+                        // Added shortcuts
+                        ('h', StaticCommand::MoveVisualLineDown.into()),
+                        ('t', StaticCommand::MoveVisualLineUp.into()),
+                        // Default shortcuts
+                        ('j', StaticCommand::MoveVisualLineDown.into()),
+                        ('k', StaticCommand::MoveVisualLineUp.into()),
+                        // Overridden shortcuts
+                        ('x', StaticCommand::MoveVisualLineUp.into()),
+                    ])),
+                    command: KeyMap(HashMap::new()),
+                }
             })
         );
     }

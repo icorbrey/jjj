@@ -7,9 +7,13 @@ use ratatui::{
     widgets::Block,
 };
 
-use crate::backend::{
-    log::{LogOutput, LogResponseEvent},
-    revisions::{ChangeId, CommitId, Revision},
+use crate::{
+    backend::{
+        config::{Config, KeyDefinition},
+        log::{LogOutput, LogResponseEvent},
+        revisions::{ChangeId, CommitId, Revision},
+    },
+    commands::{Command, StaticCommand},
 };
 
 use super::prelude::*;
@@ -64,12 +68,25 @@ pub enum RevisionSelection {
     Range(Revision, Revision),
 }
 
+fn resolve_command(config: &Config, key: char) -> Option<Command> {
+    config
+        .keys
+        .change
+        .get(&key)
+        .map(|key_def| {
+            let KeyDefinition::Command(command) = key_def;
+            command
+        })
+        .copied()
+}
+
 fn read_keys(
     mut ev_selection: EventWriter<ChangeBufferSelectionEvent>,
     mut change_buffer: Query<&mut ChangeBuffer>,
     mut ev_keypresses: EventReader<KeyEvent>,
     mut exit: EventWriter<AppExit>,
     mut navigation: Navigation,
+    config: Res<Config>,
 ) -> Result<()> {
     let mut change_buffer = change_buffer.get_single_mut()?;
 
@@ -93,28 +110,65 @@ fn read_keys(
                 exit.send_default();
                 return Ok(());
             }
-            (IndexSelection::Single(i), KeyCode::Char('j')) => {
-                Some(IndexSelection::Single(usize::min(i + 1, max)))
-            }
-            (IndexSelection::Single(i), KeyCode::Char('k')) => {
-                Some(IndexSelection::Single(i.saturating_sub(1)))
-            }
-            (IndexSelection::Single(i), KeyCode::Char('x')) => {
-                if i != (i + 1).clamp(0, max) {
-                    Some(IndexSelection::Range(i, usize::min(i + 1, max)))
-                } else {
-                    Some(IndexSelection::Single(i))
+
+            (IndexSelection::Single(i), KeyCode::Char(key)) => {
+                match resolve_command(&config, key) {
+                    Some(Command::Static(StaticCommand::MoveVisualLineDown)) => {
+                        Some(IndexSelection::Single(usize::min(i + 1, max)))
+                    }
+
+                    Some(Command::Static(StaticCommand::MoveVisualLineUp)) => {
+                        Some(IndexSelection::Single(usize::min(i.wrapping_sub(1), max)))
+                    }
+
+                    Some(Command::Static(StaticCommand::ExtendLineDown)) => {
+                        if i != (i + 1).clamp(0, max) {
+                            Some(IndexSelection::Range(i, usize::min(i + 1, max)))
+                        } else {
+                            Some(IndexSelection::Single(i))
+                        }
+                    }
+
+                    Some(Command::Static(StaticCommand::ExtendLineUp)) => {
+                        if i != 0 {
+                            Some(IndexSelection::Range(i - 1, i))
+                        } else {
+                            Some(IndexSelection::Single(i))
+                        }
+                    }
+
+                    Some(Command::Static(StaticCommand::NoOp)) => None,
+
+                    None => None,
                 }
             }
-            (IndexSelection::Range(_, end), KeyCode::Char('j')) => {
-                Some(IndexSelection::Single(usize::min(end + 1, max)))
+
+            (IndexSelection::Range(start, end), KeyCode::Char(key)) => {
+                match resolve_command(&config, key) {
+                    Some(Command::Static(StaticCommand::MoveVisualLineDown)) => {
+                        Some(IndexSelection::Single(usize::min(end + 1, max)))
+                    }
+
+                    Some(Command::Static(StaticCommand::MoveVisualLineUp)) => {
+                        Some(IndexSelection::Single(start.saturating_sub(1)))
+                    }
+
+                    Some(Command::Static(StaticCommand::ExtendLineDown)) => {
+                        Some(IndexSelection::Range(start, usize::min(end + 1, max)))
+                    }
+
+                    Some(Command::Static(StaticCommand::ExtendLineUp)) => {
+                        // TODO: I had a long day at work today - I have exactly zero clue what
+                        // should be written here.
+                        None
+                    }
+
+                    Some(Command::Static(StaticCommand::NoOp)) => None,
+
+                    None => None,
+                }
             }
-            (IndexSelection::Range(start, _), KeyCode::Char('k')) => {
-                Some(IndexSelection::Single(start.saturating_sub(1)))
-            }
-            (IndexSelection::Range(start, end), KeyCode::Char('x')) => {
-                Some(IndexSelection::Range(start, usize::min(end + 1, max)))
-            }
+
             _ => None,
         };
 
