@@ -3,6 +3,7 @@ use prelude::*;
 
 pub mod prelude {
     pub use crate::backend::log::{LogResponseEvent, LogRevsetEvent, RefreshLogEvent};
+    pub use crate::commands::Command;
     pub use crate::errors::ErrorEvent;
     pub use crate::frontend::change_buffer::ChangeBufferSelectionEvent;
     pub use crate::frontend::command_line::NotificationEvent;
@@ -14,6 +15,7 @@ pub fn plugin(app: &mut App) {
 
     // Application-wide events
     app.add_event::<ErrorEvent>();
+    app.add_event::<prelude::Command>();
 
     // Backend events
     app.add_event::<RefreshLogEvent>();

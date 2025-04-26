@@ -5,7 +5,7 @@ use std::time::Duration;
 use bevy::{app::ScheduleRunnerPlugin, prelude::*, state::app::StatesPlugin};
 use bevy_ratatui::RatatuiPlugins;
 
-use crate::{backend, events, frontend, screens};
+use crate::{backend, commands, events, frontend, screens};
 
 #[mutants::skip]
 #[tracing::instrument(skip_all)]
@@ -33,6 +33,7 @@ pub fn plugin(app: &mut App) {
 
     app.add_plugins((
         events::plugin,
+        commands::plugin,
         screens::plugin,
         frontend::plugin,
         backend::plugin,

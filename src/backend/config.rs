@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use bevy::prelude::*;
 use serde::{de::DeserializeOwned, Deserialize};
@@ -25,7 +27,7 @@ fn default_table<De: DeserializeOwned>() -> De {
 }
 
 /// Application configuration.
-#[derive(Debug, Deserialize, PartialEq, Eq, Reflect, Resource)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Resource)]
 pub struct Config {
     /// Logging configuration.
     #[serde(default = "default_table")]
@@ -34,6 +36,10 @@ pub struct Config {
     /// Splash screen configuration.
     #[serde(default = "default_table")]
     pub splash: SplashConfig,
+
+    /// Key bindings
+    #[serde(default = "default_table")]
+    pub keys: KeysConfig,
 }
 
 impl FromWorld for Config {
@@ -61,7 +67,7 @@ impl Config {
 }
 
 /// Configuration for logging.
-#[derive(Debug, Deserialize, PartialEq, Eq, Reflect)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct LogConfig {
     /// How frequently jjj should check the status of the current repo.
     #[serde(default = "LogConfig::default_poll_interval_ms")]
@@ -76,7 +82,7 @@ impl LogConfig {
 }
 
 /// Configuration for the splash screen.
-#[derive(Debug, Deserialize, PartialEq, Eq, Reflect)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct SplashConfig {
     /// Whether to skip the splash screen on startup.
     #[serde(default)]
@@ -101,6 +107,36 @@ impl SplashConfig {
     fn default_line_interval_ms() -> u64 {
         150
     }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+pub struct KeysConfig {
+    #[serde(default = "KeysConfig::default_normal")]
+    pub normal: KeyMap,
+
+    #[serde(default = "KeysConfig::default_command")]
+    pub command: KeyMap,
+}
+
+impl KeysConfig {
+    #[mutants::skip]
+    fn default_normal() -> KeyMap {
+        todo!()
+    }
+
+    #[mutants::skip]
+    fn default_command() -> KeyMap {
+        todo!()
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+pub struct KeyMap(HashMap<String, KeyDefinition>);
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+pub enum KeyDefinition {
+    Command(String),
+    MinorMode(Box<KeyMap>),
 }
 
 #[cfg(test)]
