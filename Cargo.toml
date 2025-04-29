@@ -16,10 +16,10 @@ anyhow = "1.0.97"
 bevy_ratatui = "0.7.1"
 chrono = "0.4.40"
 clap = { version = "4.5.35", features = [
-	"cargo",
-	"derive",
-	"string",
-	"wrap_help",
+  "cargo",
+  "derive",
+  "string",
+  "wrap_help",
 ] }
 crossterm = "0.28.1"
 lazy_static = "1.5.0"
